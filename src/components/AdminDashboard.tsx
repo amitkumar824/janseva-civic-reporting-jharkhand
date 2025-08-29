@@ -3,6 +3,7 @@ import { BarChart3, TrendingUp, Users, Clock, MapPin, Filter, Download, Search }
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { useTranslatedIssues } from '../hooks/useTranslatedIssues';
 import Header from './Header';
 
 interface Issue {
@@ -31,6 +32,7 @@ const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const translatedIssues = useTranslatedIssues(issues);
 
   useEffect(() => {
     // Mock data loading
@@ -110,7 +112,7 @@ const AdminDashboard: React.FC = () => {
     return { total, pending, resolved, high_priority };
   };
 
-  const filteredIssues = issues.filter(issue => {
+  const filteredIssues = translatedIssues.filter(issue => {
     const matchesSearch = issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          issue.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          issue.location.toLowerCase().includes(searchTerm.toLowerCase());
@@ -163,9 +165,9 @@ const AdminDashboard: React.FC = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            नमस्ते, {user?.name}! 🙏
+            {t('admin.welcome')}, {user?.name}! 🙏
           </h1>
-          <p className="text-gray-600">प्रशासनिक डैशबोर्ड - नागरिक सेवा प्रबंधन</p>
+          <p className="text-gray-600">{t('admin.dashboard')} - {t('admin.subtitle')}</p>
         </div>
 
         {/* Stats Cards */}
@@ -173,7 +175,7 @@ const AdminDashboard: React.FC = () => {
           <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">कुल समस्याएं</p>
+                <p className="text-sm text-gray-600 mb-1">{t('admin.totalIssues')}</p>
                 <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-xl">
@@ -182,14 +184,14 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div className="mt-4 flex items-center text-sm text-blue-600">
               <TrendingUp className="w-4 h-4 mr-1" />
-              <span>+12% इस महीने</span>
+              <span>+12% {t('admin.thisMonth')}</span>
             </div>
           </div>
 
           <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">लंबित समस्याएं</p>
+                <p className="text-sm text-gray-600 mb-1">{t('admin.pendingIssues')}</p>
                 <p className="text-3xl font-bold text-orange-600">{stats.pending}</p>
               </div>
               <div className="p-3 bg-orange-100 rounded-xl">
@@ -197,14 +199,14 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
             <div className="mt-4 text-sm text-gray-500">
-              तत्काल ध्यान देने की आवश्यकता
+              {t('admin.needsAttention')}
             </div>
           </div>
 
           <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">हल की गई</p>
+                <p className="text-sm text-gray-600 mb-1">{t('admin.resolvedIssues')}</p>
                 <p className="text-3xl font-bold text-green-600">{stats.resolved}</p>
               </div>
               <div className="p-3 bg-green-100 rounded-xl">
@@ -212,14 +214,14 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
             <div className="mt-4 flex items-center text-sm text-green-600">
-              <span>90% रिजोल्यूशन दर</span>
+              <span>90% {t('admin.resolutionRate')}</span>
             </div>
           </div>
 
           <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">उच्च प्राथमिकता</p>
+                <p className="text-sm text-gray-600 mb-1">{t('admin.highPriority')}</p>
                 <p className="text-3xl font-bold text-red-600">{stats.high_priority}</p>
               </div>
               <div className="p-3 bg-red-100 rounded-xl">
@@ -227,7 +229,7 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
             <div className="mt-4 text-sm text-red-600">
-              तुरंत कार्रवाई चाहिए
+              {t('admin.immediateAction')}
             </div>
           </div>
         </div>
@@ -240,7 +242,7 @@ const AdminDashboard: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="समस्या खोजें..."
+                  placeholder={t('admin.searchIssues')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 w-full sm:w-64"
@@ -252,13 +254,13 @@ const AdminDashboard: React.FC = () => {
                 onChange={(e) => setFilter(prev => ({ ...prev, status: e.target.value }))}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="all">सभी स्थितियां</option>
-                <option value="submitted">प्रस्तुत</option>
-                <option value="acknowledged">स्वीकृत</option>
-                <option value="assigned">सौंपा गया</option>
-                <option value="in_progress">प्रगति में</option>
-                <option value="resolved">हल</option>
-                <option value="rejected">अस्वीकृत</option>
+                <option value="all">{t('admin.allStatuses')}</option>
+                <option value="submitted">{t('status.submitted')}</option>
+                <option value="acknowledged">{t('status.acknowledged')}</option>
+                <option value="assigned">{t('status.assigned')}</option>
+                <option value="in_progress">{t('status.in_progress')}</option>
+                <option value="resolved">{t('status.resolved')}</option>
+                <option value="rejected">{t('status.rejected')}</option>
               </select>
 
               <select
@@ -266,12 +268,12 @@ const AdminDashboard: React.FC = () => {
                 onChange={(e) => setFilter(prev => ({ ...prev, category: e.target.value }))}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="all">सभी श्रेणियां</option>
-                <option value="sanitation">स्वच्छता</option>
-                <option value="road">सड़क</option>
-                <option value="streetlight">स्ट्रीट लाइट</option>
-                <option value="water">पानी</option>
-                <option value="other">अन्य</option>
+                <option value="all">{t('admin.allCategories')}</option>
+                <option value="sanitation">{t('category.sanitation')}</option>
+                <option value="road">{t('category.road')}</option>
+                <option value="streetlight">{t('category.streetlight')}</option>
+                <option value="water">{t('category.water')}</option>
+                <option value="other">{t('category.other')}</option>
               </select>
 
               <select
@@ -279,16 +281,16 @@ const AdminDashboard: React.FC = () => {
                 onChange={(e) => setFilter(prev => ({ ...prev, priority: e.target.value }))}
                 className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="all">सभी प्राथमिकताएं</option>
-                <option value="1">उच्च प्राथमिकता</option>
-                <option value="2">मध्यम प्राथमिकता</option>
-                <option value="3">कम प्राथमिकता</option>
+                <option value="all">{t('admin.allPriorities')}</option>
+                <option value="1">{t('admin.highPriorityText')}</option>
+                <option value="2">{t('admin.mediumPriorityText')}</option>
+                <option value="3">{t('admin.lowPriorityText')}</option>
               </select>
             </div>
 
             <button className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
               <Download className="w-4 h-4" />
-              <span>रिपोर्ट डाउनलोड करें</span>
+              <span>{t('admin.downloadReport')}</span>
             </button>
           </div>
         </div>
@@ -297,8 +299,8 @@ const AdminDashboard: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">नागरिक समस्याएं</h2>
-              <span className="text-sm text-gray-600">{filteredIssues.length} समस्याएं मिलीं</span>
+              <h2 className="text-lg font-semibold text-gray-900">{t('admin.citizenIssues')}</h2>
+              <span className="text-sm text-gray-600">{filteredIssues.length} {t('admin.issuesFound')}</span>
             </div>
           </div>
 
@@ -306,13 +308,13 @@ const AdminDashboard: React.FC = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">समस्या</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">रिपोर्टर</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">श्रेणी</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">स्थिति</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">प्राथमिकता</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">दिनांक</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">कार्रवाई</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.issue')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.reporter')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.category')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.status')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.priority')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.date')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('admin.action')}</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -348,7 +350,7 @@ const AdminDashboard: React.FC = () => {
                           issue.priority === 2 ? 'bg-yellow-500' : 'bg-green-500'
                         }`}></div>
                         <span className="text-sm text-gray-900">
-                          {issue.priority === 1 ? 'उच्च' : issue.priority === 2 ? 'मध्यम' : 'कम'}
+                          {issue.priority === 1 ? t('admin.highPriorityText') : issue.priority === 2 ? t('admin.mediumPriorityText') : t('admin.lowPriorityText')}
                         </span>
                       </div>
                     </td>
@@ -360,7 +362,7 @@ const AdminDashboard: React.FC = () => {
                         onClick={() => navigate(`/issue/${issue.id}`)}
                         className="text-orange-600 hover:text-orange-800 text-sm font-medium"
                       >
-                        विवरण देखें
+                        {t('admin.viewDetails')}
                       </button>
                     </td>
                   </tr>
@@ -372,7 +374,7 @@ const AdminDashboard: React.FC = () => {
           {filteredIssues.length === 0 && (
             <div className="text-center py-12">
               <Filter className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">कोई समस्या नहीं मिली</p>
+              <p className="text-gray-600">{t('admin.noIssuesFound')}</p>
             </div>
           )}
         </div>
@@ -380,37 +382,37 @@ const AdminDashboard: React.FC = () => {
         {/* Quick Actions */}
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           <div className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
-            <h3 className="font-semibold text-gray-900 mb-3">विभाग प्रदर्शन</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">{t('admin.departmentPerformance')}</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">स्वच्छता विभाग</span>
-                <span className="text-sm font-medium text-green-600">85% रिजोल्यूशन</span>
+                <span className="text-sm text-gray-700">{t('admin.sanitationDept')}</span>
+                <span className="text-sm font-medium text-green-600">85% {t('admin.resolution')}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">पीडब्ल्यूडी</span>
-                <span className="text-sm font-medium text-yellow-600">72% रिजोल्यूशन</span>
+                <span className="text-sm text-gray-700">{t('admin.pwdDept')}</span>
+                <span className="text-sm font-medium text-yellow-600">72% {t('admin.resolution')}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">जल बोर्ड</span>
-                <span className="text-sm font-medium text-red-600">65% रिजोल्यूशन</span>
+                <span className="text-sm text-gray-700">{t('admin.waterBoard')}</span>
+                <span className="text-sm font-medium text-red-600">65% {t('admin.resolution')}</span>
               </div>
             </div>
           </div>
 
           <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
-            <h3 className="font-semibold text-gray-900 mb-3">आज की गतिविधि</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">{t('admin.todayActivity')}</h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">नई शिकायतें</span>
+                <span className="text-sm text-gray-700">{t('admin.newComplaints')}</span>
                 <span className="text-sm font-medium text-blue-600">12</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">हल की गई</span>
+                <span className="text-sm text-gray-700">{t('admin.resolved')}</span>
                 <span className="text-sm font-medium text-green-600">8</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">औसत समय</span>
-                <span className="text-sm font-medium text-orange-600">36 घंटे</span>
+                <span className="text-sm text-gray-700">{t('admin.averageTime')}</span>
+                <span className="text-sm font-medium text-orange-600">36 {t('admin.hours')}</span>
               </div>
             </div>
           </div>

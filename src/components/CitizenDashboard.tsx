@@ -3,6 +3,7 @@ import { Plus, MapPin, Clock, CheckCircle, AlertCircle, LogOut, Bell, User } fro
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { useTranslatedIssues } from '../hooks/useTranslatedIssues';
 import Header from './Header';
 
 interface Issue {
@@ -26,6 +27,7 @@ const CitizenDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const translatedIssues = useTranslatedIssues(issues);
 
   useEffect(() => {
     // Mock data loading
@@ -102,7 +104,7 @@ const CitizenDashboard: React.FC = () => {
     return { total, resolved, pending };
   };
 
-  const filteredIssues = filter === 'all' ? issues : issues.filter(i => i.status === filter);
+  const filteredIssues = filter === 'all' ? translatedIssues : translatedIssues.filter(i => i.status === filter);
   const stats = getStats();
 
   if (loading) {
@@ -124,7 +126,7 @@ const CitizenDashboard: React.FC = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            नमस्ते, {user?.name}! 🙏
+            {t('admin.welcome')}, {user?.name}! 🙏
           </h1>
           <p className="text-gray-600">{t('citizen.dashboard')}</p>
         </div>
@@ -180,7 +182,7 @@ const CitizenDashboard: React.FC = () => {
                 : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
             }`}
           >
-            सभी समस्याएं
+            {t('language') === 'hi' ? 'सभी समस्याएं' : 'All Issues'}
           </button>
           <button
             onClick={() => setFilter('submitted')}
@@ -190,7 +192,7 @@ const CitizenDashboard: React.FC = () => {
                 : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
             }`}
           >
-            प्रस्तुत
+            {t('status.submitted')}
           </button>
           <button
             onClick={() => setFilter('in_progress')}
@@ -200,7 +202,7 @@ const CitizenDashboard: React.FC = () => {
                 : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
             }`}
           >
-            प्रगति में
+            {t('status.in_progress')}
           </button>
           <button
             onClick={() => setFilter('resolved')}
@@ -210,7 +212,7 @@ const CitizenDashboard: React.FC = () => {
                 : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
             }`}
           >
-            हल की गई
+            {t('status.resolved')}
           </button>
         </div>
 
@@ -219,7 +221,7 @@ const CitizenDashboard: React.FC = () => {
           {filteredIssues.length === 0 ? (
             <div className="text-center py-12">
               <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">कोई समस्या नहीं मिली</p>
+              <p className="text-gray-600">{t('admin.noIssuesFound')}</p>
             </div>
           ) : (
             filteredIssues.map((issue) => (

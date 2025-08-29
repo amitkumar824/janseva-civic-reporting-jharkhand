@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Camera, MapPin, Upload, ArrowLeft, Send, Mic, MicOff } from 'lucide-react';
+import { Camera, MapPin, Upload, ArrowLeft, Send, Mic, MicOff, Sparkles, Brain } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { aiService } from '../services/aiService';
 import Header from './Header';
 
 const ReportIssue: React.FC = () => {
@@ -17,6 +18,14 @@ const ReportIssue: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<{
+    caption: string;
+    category: string;
+    title: string;
+    priority: number;
+    department: string;
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
@@ -61,11 +70,50 @@ const ReportIssue: React.FC = () => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files).slice(0, 3 - images.length);
       setImages(prev => [...prev, ...newFiles]);
+      
+      // Analyze the first image with AI
+      if (newFiles.length > 0) {
+        analyzeWithAI(newFiles[0]);
+      }
     }
   };
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const analyzeWithAI = async (imageFile: File) => {
+    setAiAnalyzing(true);
+    try {
+      const caption = await aiService.analyzeImage(imageFile);
+      const category = aiService.identifyProblem(caption, formData.description);
+      const title = aiService.generateTitle(caption, formData.description, category);
+      const priority = aiService.determinePriority(formData.description, caption);
+      const department = aiService.mapDepartment(category);
+      
+      setAiSuggestions({
+        caption,
+        category,
+        title,
+        priority,
+        department
+      });
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+    } finally {
+      setAiAnalyzing(false);
+    }
+  };
+
+  const applySuggestions = () => {
+    if (aiSuggestions) {
+      setFormData(prev => ({
+        ...prev,
+        title: aiSuggestions.title,
+        category: aiSuggestions.category,
+        description: prev.description || aiSuggestions.caption
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,13 +133,19 @@ const ReportIssue: React.FC = () => {
     }
   };
 
-  const startVoiceRecording = () => {
+  const startVoiceRecording = async () => {
     setIsRecording(true);
-    // Implement voice recording logic here
-    setTimeout(() => {
+    try {
+      const transcript = await aiService.startSpeechRecognition();
+      setFormData(prev => ({
+        ...prev,
+        description: prev.description + (prev.description ? ' ' : '') + transcript
+      }));
+    } catch (error) {
+      console.error('Speech recognition failed:', error);
+    } finally {
       setIsRecording(false);
-      // Add recorded text to description
-    }, 3000);
+    }
   };
 
   return (
@@ -113,18 +167,59 @@ const ReportIssue: React.FC = () => {
           </div>
         </div>
 
+        {/* AI Suggestions */}
+        {aiSuggestions && (
+          <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
+            <div className="flex items-center space-x-2 mb-4">
+              <Brain className="w-5 h-5 text-blue-600" />
+              <h3 className="font-semibold text-gray-900">AI सुझाव</h3>
+              {aiAnalyzing && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>}
+            </div>
+            
+            <div className="space-y-3 mb-4">
+              <div>
+                <p className="text-sm text-gray-600">पहचानी गई समस्या:</p>
+                <p className="font-medium text-gray-900">{t(`category.${aiSuggestions.category}`)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">सुझाया गया शीर्षक:</p>
+                <p className="font-medium text-gray-900">{aiSuggestions.title}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">संबंधित विभाग:</p>
+                <p className="font-medium text-gray-900">{aiSuggestions.department}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">प्राथमिकता स्तर:</p>
+                <p className="font-medium text-gray-900">
+                  {aiSuggestions.priority === 1 ? 'उच्च' : aiSuggestions.priority === 2 ? 'मध्यम' : 'कम'}
+                </p>
+              </div>
+            </div>
+            
+            <button
+              type="button"
+              onClick={applySuggestions}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>AI सुझाव लागू करें</span>
+            </button>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Issue Title */}
           <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              समस्या का शीर्षक *
+              {t('language') === 'hi' ? 'समस्या का शीर्षक *' : 'Issue Title *'}
             </label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="संक्षेप में समस्या बताएं (उदा: स्ट्रीट लाइट खराब है)"
+              placeholder={t('language') === 'hi' ? 'संक्षेप में समस्या बताएं (उदा: स्ट्रीट लाइट खराब है)' : 'Briefly describe the issue (e.g., Street light is broken)'}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               required
             />
@@ -133,7 +228,7 @@ const ReportIssue: React.FC = () => {
           {/* Category */}
           <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              समस्या की श्रेणी *
+              {t('language') === 'hi' ? 'समस्या की श्रेणी *' : 'Issue Category *'}
             </label>
             <select
               value={formData.category}
@@ -141,12 +236,12 @@ const ReportIssue: React.FC = () => {
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               required
             >
-              <option value="">श्रेणी चुनें</option>
-              <option value="sanitation">स्वच्छता (कचरा, सफाई)</option>
-              <option value="road">सड़क (गड्ढे, टूटी सड़क)</option>
-              <option value="streetlight">स्ट्रीट लाइट (बिजली की समस्या)</option>
-              <option value="water">पानी (लीकेज, आपूर्ति)</option>
-              <option value="other">अन्य</option>
+              <option value="">{t('language') === 'hi' ? 'श्रेणी चुनें' : 'Select Category'}</option>
+              <option value="sanitation">{t('category.sanitation')} {t('language') === 'hi' ? '(कचरा, सफाई)' : '(Garbage, Cleaning)'}</option>
+              <option value="road">{t('category.road')} {t('language') === 'hi' ? '(गड्ढे, टूटी सड़क)' : '(Potholes, Damaged Roads)'}</option>
+              <option value="streetlight">{t('category.streetlight')} {t('language') === 'hi' ? '(बिजली की समस्या)' : '(Electrical Issues)'}</option>
+              <option value="water">{t('category.water')} {t('language') === 'hi' ? '(लीकेज, आपूर्ति)' : '(Leakage, Supply)'}</option>
+              <option value="other">{t('category.other')}</option>
             </select>
           </div>
 
@@ -154,7 +249,7 @@ const ReportIssue: React.FC = () => {
           <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-medium text-gray-700">
-                स्थान *
+                {t('language') === 'hi' ? 'स्थान *' : 'Location *'}
               </label>
               <button
                 type="button"
@@ -163,14 +258,14 @@ const ReportIssue: React.FC = () => {
                 className="flex items-center space-x-2 px-3 py-1 text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg transition-colors disabled:opacity-50"
               >
                 <MapPin className="w-4 h-4" />
-                <span>{locationLoading ? 'लोकेशन पता कर रहे हैं...' : 'वर्तमान स्थान उपयोग करें'}</span>
+                <span>{locationLoading ? (t('language') === 'hi' ? 'लोकेशन पता कर रहे हैं...' : 'Getting location...') : (t('language') === 'hi' ? 'वर्तमान स्थान उपयोग करें' : 'Use current location')}</span>
               </button>
             </div>
             <input
               type="text"
               value={formData.location}
               onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-              placeholder="समस्या का पता या स्थान (उदा: कनॉट प्लेस, नई दिल्ली)"
+              placeholder={t('language') === 'hi' ? 'समस्या का पता या स्थान (उदा: कनॉट प्लेस, नई दिल्ली)' : 'Issue address or location (e.g., Connaught Place, New Delhi)'}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               required
             />
@@ -180,7 +275,7 @@ const ReportIssue: React.FC = () => {
           <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-medium text-gray-700">
-                विस्तार से बताएं *
+                {t('language') === 'hi' ? 'विस्तार से बताएं *' : 'Describe in detail *'}
               </label>
               <button
                 type="button"
@@ -192,13 +287,13 @@ const ReportIssue: React.FC = () => {
                 }`}
               >
                 {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                <span>{isRecording ? 'रिकॉर्डिंग बंद करें' : 'आवाज़ रिकॉर्ड करें'}</span>
+                <span>{isRecording ? (t('language') === 'hi' ? 'रिकॉर्डिंग बंद करें' : 'Stop Recording') : (t('language') === 'hi' ? 'आवाज़ रिकॉर्ड करें' : 'Record Voice')}</span>
               </button>
             </div>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="समस्या के बारे में विस्तार से बताएं। कब से यह समस्या है? यह कितनी गंभीर है?"
+              placeholder={t('language') === 'hi' ? 'समस्या के बारे में विस्तार से बताएं। कब से यह समस्या है? यह कितनी गंभीर है?' : 'Describe the issue in detail. How long has this been a problem? How serious is it?'}
               rows={4}
               className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
               required
@@ -208,7 +303,7 @@ const ReportIssue: React.FC = () => {
           {/* Image Upload */}
           <div className="p-6 bg-white rounded-xl shadow-sm border border-gray-100">
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              तस्वीरें अपलोड करें (अधिकतम 3)
+              {t('language') === 'hi' ? 'तस्वीरें अपलोड करें (अधिकतम 3)' : 'Upload Images (Maximum 3)'}
             </label>
             
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors">
@@ -224,14 +319,14 @@ const ReportIssue: React.FC = () => {
               {images.length === 0 ? (
                 <div>
                   <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 mb-2">समस्या की तस्वीर अपलोड करें</p>
+                  <p className="text-gray-600 mb-2">{t('language') === 'hi' ? 'समस्या की तस्वीर अपलोड करें' : 'Upload photos of the issue'}</p>
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="inline-flex items-center space-x-2 px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg transition-colors"
                   >
                     <Camera className="w-4 h-4" />
-                    <span>फोटो चुनें</span>
+                    <span>{t('language') === 'hi' ? 'फोटो चुनें' : 'Choose Photos'}</span>
                   </button>
                 </div>
               ) : (
@@ -260,7 +355,7 @@ const ReportIssue: React.FC = () => {
                       onClick={() => fileInputRef.current?.click()}
                       className="text-orange-600 hover:text-orange-700 text-sm font-medium"
                     >
-                      + और तस्वीर जोड़ें
+                      {t('language') === 'hi' ? '+ और तस्वीर जोड़ें' : '+ Add more photos'}
                     </button>
                   )}
                 </div>
@@ -285,12 +380,12 @@ const ReportIssue: React.FC = () => {
               {submitting ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>रिपोर्ट जमा हो रही है...</span>
+                  <span>{t('language') === 'hi' ? 'रिपोर्ट जमा हो रही है...' : 'Submitting report...'}</span>
                 </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />
-                  <span>समस्या रिपोर्ट करें</span>
+                  <span>{t('language') === 'hi' ? 'समस्या रिपोर्ट करें' : 'Report Issue'}</span>
                 </>
               )}
             </button>
@@ -299,12 +394,12 @@ const ReportIssue: React.FC = () => {
 
         {/* Helper Text */}
         <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h4 className="font-medium text-blue-900 mb-2">💡 सुझाव</h4>
+          <h4 className="font-medium text-blue-900 mb-2">💡 {t('language') === 'hi' ? 'सुझाव' : 'Tips'}</h4>
           <ul className="text-sm text-blue-800 space-y-1">
-            <li>• स्पष्ट और विस्तृत विवरण दें</li>
-            <li>• समस्या की तस्वीर जरूर लें</li>
-            <li>• सही स्थान की जानकारी दें</li>
-            <li>• आपको 24 घंटे में अपडेट मिलेगा</li>
+            <li>• {t('language') === 'hi' ? 'स्पष्ट और विस्तृत विवरण दें' : 'Provide clear and detailed description'}</li>
+            <li>• {t('language') === 'hi' ? 'समस्या की तस्वीर जरूर लें' : 'Take photos of the issue'}</li>
+            <li>• {t('language') === 'hi' ? 'सही स्थान की जानकारी दें' : 'Provide accurate location information'}</li>
+            <li>• {t('language') === 'hi' ? 'आपको 24 घंटे में अपडेट मिलेगा' : 'You will receive updates within 24 hours'}</li>
           </ul>
         </div>
       </main>
