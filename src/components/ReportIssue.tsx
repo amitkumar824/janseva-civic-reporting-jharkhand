@@ -237,11 +237,45 @@ const ReportIssue: React.FC = () => {
               required
             >
               <option value="">{t('language') === 'hi' ? 'श्रेणी चुनें' : 'Select Category'}</option>
-              <option value="sanitation">{t('category.sanitation')} {t('language') === 'hi' ? '(कचरा, सफाई)' : '(Garbage, Cleaning)'}</option>
-              <option value="road">{t('category.road')} {t('language') === 'hi' ? '(गड्ढे, टूटी सड़क)' : '(Potholes, Damaged Roads)'}</option>
-              <option value="streetlight">{t('category.streetlight')} {t('language') === 'hi' ? '(बिजली की समस्या)' : '(Electrical Issues)'}</option>
-              <option value="water">{t('category.water')} {t('language') === 'hi' ? '(लीकेज, आपूर्ति)' : '(Leakage, Supply)'}</option>
-              <option value="other">{t('category.other')}</option>
+              <optgroup label={t('language') === 'hi' ? 'टेस्ट डेमो' : 'Test Demo'}>
+                <option value="test_case">TEST CASE</option>
+              </optgroup>
+              <optgroup label={t('language') === 'hi' ? 'बिजली संबंधी' : 'Electricity Related'}>
+                <option value="electricity_connection">Electricity connection in LHP</option>
+                <option value="fund_not_received">Fund not received</option>
+              </optgroup>
+              <optgroup label={t('language') === 'hi' ? 'आवास योजना' : 'Housing Scheme'}>
+                <option value="pmay_handover">PMAY (LHP) Handover</option>
+              </optgroup>
+              <optgroup label={t('language') === 'hi' ? 'मरम्मत सेवाएं' : 'Repair Services'}>
+                <option value="hydt_repairing">HYDT REPAIRING</option>
+                <option value="motor_repairing">Motor Repairing</option>
+                <option value="hand_pump_repairing">Hand Pump Repairing</option>
+              </optgroup>
+              <optgroup label={t('language') === 'hi' ? 'पानी संबंधी' : 'Water Related'}>
+                <option value="new_boring">New Boring Related Issue (HYDT/MINI HYDT)</option>
+                <option value="water_bill">Water Bill Related Issue</option>
+                <option value="water_leakage">Water Line Leakage</option>
+                <option value="septic_tank">SEPTIC TANK</option>
+              </optgroup>
+              <optgroup label={t('language') === 'hi' ? 'सड़क और भवन' : 'Roads & Buildings'}>
+                <option value="rnb_issues">R & B Related Issues</option>
+              </optgroup>
+              <optgroup label={t('language') === 'hi' ? 'लाइसेंस और कर' : 'License & Tax'}>
+                <option value="new_holding_trade">New Holding and Trade licence</option>
+                <option value="trade_renewal">New Trade licence and renewal</option>
+                <option value="tax_increase">Tax increase related issue</option>
+                <option value="number_not_generated">Applied but holding or trade number not generated</option>
+                <option value="receipt_not_generated">Bill Paid online but receipt not generated</option>
+                <option value="bill_correction">Wrong Name In Bill/Error in Spelling/Address Change/Phone number change</option>
+              </optgroup>
+              <optgroup label={t('language') === 'hi' ? 'सामान्य' : 'General'}>
+                <option value="sanitation">{t('category.sanitation')} {t('language') === 'hi' ? '(कचरा, सफाई)' : '(Garbage, Cleaning)'}</option>
+                <option value="road">{t('category.road')} {t('language') === 'hi' ? '(गड्ढे, टूटी सड़क)' : '(Potholes, Damaged Roads)'}</option>
+                <option value="streetlight">{t('category.streetlight')} {t('language') === 'hi' ? '(बिजली की समस्या)' : '(Electrical Issues)'}</option>
+                <option value="water">{t('category.water')} {t('language') === 'hi' ? '(लीकेज, आपूर्ति)' : '(Leakage, Supply)'}</option>
+                <option value="other">{t('category.other')}</option>
+              </optgroup>
             </select>
           </div>
 

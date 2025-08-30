@@ -108,17 +108,18 @@ export class AIService {
   // Speech to text (using Web Speech API)
   public startSpeechRecognition(): Promise<string> {
     return new Promise((resolve, reject) => {
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      if (!('SpeechRecognition' in window) && !('webkitSpeechRecognition' in window)) {
         reject(new Error('Speech recognition not supported'));
         return;
       }
 
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       const recognition = new SpeechRecognition();
       
       recognition.lang = 'hi-IN'; // Hindi language
       recognition.continuous = false;
       recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
 
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
@@ -126,10 +127,24 @@ export class AIService {
       };
 
       recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
         reject(new Error(`Speech recognition error: ${event.error}`));
       };
 
+      recognition.onend = () => {
+        console.log('Speech recognition ended');
+      };
+
       recognition.start();
+      
+      // Auto-stop after 10 seconds
+      setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch (e) {
+          console.log('Recognition already stopped');
+        }
+      }, 10000);
     });
   }
 

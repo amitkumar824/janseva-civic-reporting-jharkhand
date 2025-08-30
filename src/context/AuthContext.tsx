@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiService } from '../services/apiService';
 
 interface User {
   id: string;
@@ -44,24 +45,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string, role: string): Promise<boolean> => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await apiService.login(email, password, role);
       
-      // Mock successful login
-      const userData: User = {
-        id: Date.now().toString(),
-        name: role === 'citizen' ? 'राहुल शर्मा' : 'श्रीमती प्रिया पटेल',
-        email,
-        role: role as User['role'],
-        phone: '+91 98765 43210'
-      };
-      
-      setUser(userData);
-      localStorage.setItem('token', 'mock-token');
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      setLoading(false);
-      return true;
+      if (response.success && response.data) {
+        setUser(response.data.user as User);
+        setLoading(false);
+        return true;
+      } else {
+        setLoading(false);
+        return false;
+      }
     } catch (error) {
       setLoading(false);
       return false;
@@ -71,23 +64,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string, phone: string): Promise<boolean> => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await apiService.register(name, email, password, phone);
       
-      const userData: User = {
-        id: Date.now().toString(),
-        name,
-        email,
-        role: 'citizen',
-        phone
-      };
-      
-      setUser(userData);
-      localStorage.setItem('token', 'mock-token');
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      setLoading(false);
-      return true;
+      if (response.success && response.data) {
+        setUser(response.data.user as User);
+        setLoading(false);
+        return true;
+      } else {
+        setLoading(false);
+        return false;
+      }
     } catch (error) {
       setLoading(false);
       return false;
@@ -95,9 +81,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    apiService.logout();
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
   };
 
   return (
