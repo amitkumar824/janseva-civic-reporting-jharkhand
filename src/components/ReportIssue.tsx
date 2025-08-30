@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { aiService } from '../services/aiService';
+import { apiService } from '../services/api';
 import Header from './Header';
 
 const ReportIssue: React.FC = () => {
@@ -121,13 +122,48 @@ const ReportIssue: React.FC = () => {
     setSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Convert images to base64 for upload
+      const imagePromises = images.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const base64Images = await Promise.all(imagePromises);
+
+      // Create issue
+      const issueData = {
+        title: formData.title,
+        description: formData.description,
+        category: formData.category.toUpperCase(),
+        location: formData.location,
+        coordinates: formData.coordinates,
+        priority: aiSuggestions?.priority === 1 ? 'HIGH' : aiSuggestions?.priority === 2 ? 'MEDIUM' : 'LOW',
+        images: base64Images
+      };
+
+      const response = await apiService.createIssue(issueData);
       
-      // Mock successful submission
-      navigate('/citizen');
+      if (response.error) {
+        alert(`Error: ${response.error}`);
+        return;
+      }
+
+      if (response.data) {
+        // Upload images if issue was created successfully
+        if (base64Images.length > 0) {
+          await apiService.uploadImages(response.data.issue.id, base64Images);
+        }
+        
+        navigate('/citizen');
+      }
     } catch (error) {
       console.error('Error submitting issue:', error);
+      alert('Failed to submit issue. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -237,45 +273,11 @@ const ReportIssue: React.FC = () => {
               required
             >
               <option value="">{t('language') === 'hi' ? 'श्रेणी चुनें' : 'Select Category'}</option>
-              <optgroup label={t('language') === 'hi' ? 'टेस्ट डेमो' : 'Test Demo'}>
-                <option value="test_case">TEST CASE</option>
-              </optgroup>
-              <optgroup label={t('language') === 'hi' ? 'बिजली संबंधी' : 'Electricity Related'}>
-                <option value="electricity_connection">Electricity connection in LHP</option>
-                <option value="fund_not_received">Fund not received</option>
-              </optgroup>
-              <optgroup label={t('language') === 'hi' ? 'आवास योजना' : 'Housing Scheme'}>
-                <option value="pmay_handover">PMAY (LHP) Handover</option>
-              </optgroup>
-              <optgroup label={t('language') === 'hi' ? 'मरम्मत सेवाएं' : 'Repair Services'}>
-                <option value="hydt_repairing">HYDT REPAIRING</option>
-                <option value="motor_repairing">Motor Repairing</option>
-                <option value="hand_pump_repairing">Hand Pump Repairing</option>
-              </optgroup>
-              <optgroup label={t('language') === 'hi' ? 'पानी संबंधी' : 'Water Related'}>
-                <option value="new_boring">New Boring Related Issue (HYDT/MINI HYDT)</option>
-                <option value="water_bill">Water Bill Related Issue</option>
-                <option value="water_leakage">Water Line Leakage</option>
-                <option value="septic_tank">SEPTIC TANK</option>
-              </optgroup>
-              <optgroup label={t('language') === 'hi' ? 'सड़क और भवन' : 'Roads & Buildings'}>
-                <option value="rnb_issues">R & B Related Issues</option>
-              </optgroup>
-              <optgroup label={t('language') === 'hi' ? 'लाइसेंस और कर' : 'License & Tax'}>
-                <option value="new_holding_trade">New Holding and Trade licence</option>
-                <option value="trade_renewal">New Trade licence and renewal</option>
-                <option value="tax_increase">Tax increase related issue</option>
-                <option value="number_not_generated">Applied but holding or trade number not generated</option>
-                <option value="receipt_not_generated">Bill Paid online but receipt not generated</option>
-                <option value="bill_correction">Wrong Name In Bill/Error in Spelling/Address Change/Phone number change</option>
-              </optgroup>
-              <optgroup label={t('language') === 'hi' ? 'सामान्य' : 'General'}>
-                <option value="sanitation">{t('category.sanitation')} {t('language') === 'hi' ? '(कचरा, सफाई)' : '(Garbage, Cleaning)'}</option>
-                <option value="road">{t('category.road')} {t('language') === 'hi' ? '(गड्ढे, टूटी सड़क)' : '(Potholes, Damaged Roads)'}</option>
-                <option value="streetlight">{t('category.streetlight')} {t('language') === 'hi' ? '(बिजली की समस्या)' : '(Electrical Issues)'}</option>
-                <option value="water">{t('category.water')} {t('language') === 'hi' ? '(लीकेज, आपूर्ति)' : '(Leakage, Supply)'}</option>
-                <option value="other">{t('category.other')}</option>
-              </optgroup>
+              <option value="sanitation">{t('category.sanitation')} {t('language') === 'hi' ? '(कचरा, सफाई)' : '(Garbage, Cleaning)'}</option>
+              <option value="road">{t('category.road')} {t('language') === 'hi' ? '(गड्ढे, टूटी सड़क)' : '(Potholes, Damaged Roads)'}</option>
+              <option value="streetlight">{t('category.streetlight')} {t('language') === 'hi' ? '(बिजली की समस्या)' : '(Electrical Issues)'}</option>
+              <option value="water">{t('category.water')} {t('language') === 'hi' ? '(लीकेज, आपूर्ति)' : '(Leakage, Supply)'}</option>
+              <option value="other">{t('category.other')}</option>
             </select>
           </div>
 

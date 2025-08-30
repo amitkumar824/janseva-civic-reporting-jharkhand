@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { useTranslatedIssues } from '../hooks/useTranslatedIssues';
+import { apiService } from '../services/api';
 import Header from './Header';
 
 interface Issue {
@@ -30,48 +31,45 @@ const CitizenDashboard: React.FC = () => {
   const translatedIssues = useTranslatedIssues(issues);
 
   useEffect(() => {
-    // Mock data loading
-    setTimeout(() => {
-      setIssues([
-        {
-          id: '1',
-          title: 'बिजली की लाइट खराब है',
-          description: 'मेरे मोहल्ले की स्ट्रीट लाइट 3 दिन से खराब है',
-          category: 'streetlight',
-          status: 'in_progress',
-          priority: 2,
-          location: 'राजौरी गार्डन, नई दिल्ली',
-          createdAt: '2025-01-08T10:00:00Z',
-          updatedAt: '2025-01-09T15:30:00Z',
-          imageUrl: 'https://images.pexels.com/photos/210012/pexels-photo-210012.jpeg?auto=compress&cs=tinysrgb&w=400'
-        },
-        {
-          id: '2',
-          title: 'गड्ढे से भरी सड़क',
-          description: 'सड़क पर बहुत से गड्ढे हैं जिससे दुर्घटना हो सकती है',
-          category: 'road',
-          status: 'acknowledged',
-          priority: 1,
-          location: 'लाजपत नगर, नई दिल्ली',
-          createdAt: '2025-01-07T14:20:00Z',
-          updatedAt: '2025-01-07T16:45:00Z',
-          imageUrl: 'https://images.pexels.com/photos/4560079/pexels-photo-4560079.jpeg?auto=compress&cs=tinysrgb&w=400'
-        },
-        {
-          id: '3',
-          title: 'साफ-सफाई की समस्या',
-          description: 'कचरा नहीं उठाया जा रहा है पिछले 5 दिनों से',
-          category: 'sanitation',
-          status: 'resolved',
-          priority: 2,
-          location: 'कमला नगर, दिल्ली',
-          createdAt: '2025-01-05T09:15:00Z',
-          updatedAt: '2025-01-08T11:00:00Z'
+    const fetchIssues = async () => {
+      try {
+        const response = await apiService.getUserIssues({
+          page: 1,
+          limit: 50,
+          status: filter === 'all' ? undefined : filter
+        });
+        
+        if (response.error) {
+          console.error('Failed to fetch issues:', response.error);
+          return;
         }
-      ]);
-      setLoading(false);
-    }, 1000);
-  }, []);
+        
+        if (response.data) {
+          // Transform backend data to frontend format
+          const transformedIssues = response.data.issues.map(issue => ({
+            id: issue.id,
+            title: issue.title,
+            description: issue.description,
+            category: issue.category.toLowerCase(),
+            status: issue.status.toLowerCase().replace('_', ''),
+            priority: issue.priority === 'HIGH' ? 1 : issue.priority === 'MEDIUM' ? 2 : 3,
+            location: issue.location,
+            createdAt: issue.createdAt,
+            updatedAt: issue.updatedAt,
+            imageUrl: issue.images && issue.images.length > 0 ? issue.images[0] : undefined
+          }));
+          
+          setIssues(transformedIssues);
+        }
+      } catch (error) {
+        console.error('Error fetching issues:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIssues();
+  }, [filter]);
 
   const getStatusColor = (status: string) => {
     const colors = {

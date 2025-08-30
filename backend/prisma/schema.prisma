@@ -1,0 +1,135 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(CITIZEN)
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  reportedIssues Issue[] @relation("Reporter")
+  assignedIssues Issue[] @relation("Assignee")
+  comments      Comment[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Issue {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  category    IssueCategory
+  status      IssueStatus @default(SUBMITTED)
+  priority    Priority    @default(MEDIUM)
+  location    String
+  coordinates Json? // {lat: number, lng: number}
+  images      String[]    // Cloudinary URLs
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  reporterId String
+  reporter   User   @relation("Reporter", fields: [reporterId], references: [id])
+  assigneeId String?
+  assignee   User?  @relation("Assignee", fields: [assigneeId], references: [id])
+  department String?
+  comments   Comment[]
+  updates    IssueUpdate[]
+
+  @@map("issues")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  issueId String
+  issue   Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User  @relation(fields: [userId], references: [id])
+
+  @@map("comments")
+}
+
+model IssueUpdate {
+  id          String   @id @default(cuid())
+  status      IssueStatus
+  message     String
+  createdAt   DateTime @default(now())
+
+  // Relations
+  issueId String
+  issue   Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@map("issue_updates")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  type      NotificationType
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+enum UserRole {
+  CITIZEN
+  ADMIN
+  DEPARTMENT
+  SUPERADMIN
+}
+
+enum IssueCategory {
+  ROAD
+  STREETLIGHT
+  WATER
+  SANITATION
+  OTHER
+}
+
+enum IssueStatus {
+  SUBMITTED
+  ACKNOWLEDGED
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum NotificationType {
+  ISSUE_UPDATE
+  ASSIGNMENT
+  RESOLUTION
+  GENERAL
+}

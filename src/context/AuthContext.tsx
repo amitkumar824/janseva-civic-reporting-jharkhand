@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiService } from '../services/apiService';
+import { apiService } from '../services/api';
 
 interface User {
   id: string;
@@ -35,27 +35,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check for stored token on app load
     const token = localStorage.getItem('token');
     if (token) {
-      // Simulate token validation
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      setUser(userData);
+      // Validate token with backend
+      apiService.getProfile()
+        .then(response => {
+          if (response.data) {
+            const userData: User = {
+              id: response.data.user.id,
+              name: response.data.user.name,
+              email: response.data.user.email,
+              role: response.data.user.role.toLowerCase() as User['role'],
+              phone: response.data.user.phone || ''
+            };
+            setUser(userData);
+          } else {
+            // Token invalid, clear storage
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
+        })
+        .catch(() => {
+          // Token invalid, clear storage
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (email: string, password: string, role: string): Promise<boolean> => {
     setLoading(true);
     try {
-      const response = await apiService.login(email, password, role);
+      const response = await apiService.login({ email, password });
       
-      if (response.success && response.data) {
-        setUser(response.data.user as User);
-        setLoading(false);
-        return true;
-      } else {
+      if (response.error) {
+        console.error('Login failed:', response.error);
         setLoading(false);
         return false;
       }
+      
+      if (response.data) {
+        const userData: User = {
+          id: response.data.user.id,
+          name: response.data.user.name,
+          email: response.data.user.email,
+          role: response.data.user.role.toLowerCase() as User['role'],
+          phone: response.data.user.phone || ''
+        };
+        
+        setUser(userData);
+        // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify(userData));
+        setLoading(false);
+        return true;
+      }
+      
+      setLoading(false);
+      return false;
     } catch (error) {
+      console.error('Login error:', error);
       setLoading(false);
       return false;
     }
@@ -64,25 +105,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (name: string, email: string, password: string, phone: string): Promise<boolean> => {
     setLoading(true);
     try {
-      const response = await apiService.register(name, email, password, phone);
+      const response = await apiService.register({ name, email, password, phone });
       
-      if (response.success && response.data) {
-        setUser(response.data.user as User);
-        setLoading(false);
-        return true;
-      } else {
+      if (response.error) {
+        console.error('Registration failed:', response.error);
         setLoading(false);
         return false;
       }
+      
+      if (response.data) {
+        const userData: User = {
+          id: response.data.user.id,
+          name: response.data.user.name,
+          email: response.data.user.email,
+          role: response.data.user.role.toLowerCase() as User['role'],
+          phone: response.data.user.phone || ''
+        };
+        
+        setUser(userData);
+        // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify(userData));
+        setLoading(false);
+        return true;
+      }
+      
+      setLoading(false);
+      return false;
     } catch (error) {
+      console.error('Registration error:', error);
       setLoading(false);
       return false;
     }
   };
 
-  const logout = () => {
-    apiService.logout();
-    setUser(null);
+  const logout = async () => {
+    try {
+      await apiService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
   };
 
   return (
