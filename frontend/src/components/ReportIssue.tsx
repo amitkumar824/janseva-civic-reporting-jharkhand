@@ -5,6 +5,7 @@ import { aiService } from '../services/aiService';
 import { cloudinaryService } from '../services/cloudinaryService';
 import { apiService } from '../services/api';
 import Header from './Header';
+import { useLanguage } from '../context/LanguageContext';
 
 // Fix for Leaflet marker icons
 import L from 'leaflet';
@@ -35,6 +36,8 @@ const MapClickHandler: React.FC<{ onLocationSelect: (lat: number, lng: number) =
 };
 
 const ReportIssue: React.FC = () => {
+  const { t } = useLanguage();
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -124,33 +127,51 @@ const ReportIssue: React.FC = () => {
   const analyzeWithAI = async (file: File) => {
     setIsAnalyzing(true);
     try {
-      const analysis = await aiService.analyzeImage(file);
-      setAiAnalysis(analysis);
+      // Convert file to base64
+      const base64Data = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      // Use the enhanced AI service
+      const analysis = await aiService.analyzeCivicIssue(base64Data);
       
-      // Auto-fill form fields based on AI analysis
-      setFormData(prev => ({
-        ...prev,
-        title: analysis.title || prev.title,
-        description: analysis.complaintText || prev.description,
-        category: analysis.category || prev.category,
-        priority: analysis.priority || prev.priority
-      }));
-      
-      console.log('AI Analysis Result:', analysis);
+      if (analysis.success && analysis.data) {
+        const data = analysis.data;
+        setAiAnalysis(data);
+        
+        // Auto-fill form fields based on AI analysis
+        setFormData(prev => ({
+          ...prev,
+          title: data.title || prev.title,
+          description: data.complaintText || prev.description,
+          category: data.category || prev.category,
+          priority: data.priority || prev.priority
+        }));
+        
+        console.log('Enhanced AI Analysis Result:', data);
+      } else {
+        throw new Error('AI analysis failed');
+      }
     } catch (error) {
       console.error('AI analysis failed:', error);
       // Use fallback analysis
       const fallbackAnalysis = {
         title: 'Civic Issue Detected',
-        description: 'Issue detected from image analysis. Please provide additional details.',
+        problemIdentified: 'Other Civic Issue',
+        department: 'General Complaints Department',
         category: 'OTHER',
-        priority: 'MEDIUM'
+        priority: 'MEDIUM',
+        imageCaption: 'Analysis failed',
+        complaintText: 'Issue detected from image analysis. Please provide additional details.',
+        aiConfidence: 'low'
       };
       setAiAnalysis(fallbackAnalysis);
       setFormData(prev => ({
         ...prev,
         title: fallbackAnalysis.title,
-        description: fallbackAnalysis.description,
+        description: fallbackAnalysis.complaintText,
         category: fallbackAnalysis.category,
         priority: fallbackAnalysis.priority
       }));
@@ -164,14 +185,35 @@ const ReportIssue: React.FC = () => {
     setVoiceTranscript('');
     
     try {
+      // For now, we'll use a simple approach
+      // In a real implementation, you'd capture audio and send it to the AI
       const transcript = await aiService.startSpeechRecognition();
       setVoiceTranscript(transcript);
       
-      // Append to description
-      setFormData(prev => ({
-        ...prev,
-        description: prev.description + (prev.description ? ' ' : '') + transcript
-      }));
+      // Use AI analysis on the voice transcript
+      if (transcript) {
+        const analysis = await aiService.analyzeCivicIssue(undefined, transcript);
+        
+        if (analysis.success && analysis.data) {
+          const data = analysis.data;
+          setAiAnalysis(data);
+          
+          // Auto-fill form fields based on AI analysis
+          setFormData(prev => ({
+            ...prev,
+            title: data.title || prev.title,
+            description: data.complaintText || prev.description,
+            category: data.category || prev.category,
+            priority: data.priority || prev.priority
+          }));
+        } else {
+          // Append to description if AI analysis fails
+          setFormData(prev => ({
+            ...prev,
+            description: prev.description + (prev.description ? ' ' : '') + transcript
+          }));
+        }
+      }
     } catch (error) {
       console.error('Speech recognition failed:', error);
       alert('Voice recording failed. Please try again.');
@@ -244,25 +286,30 @@ const ReportIssue: React.FC = () => {
       
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Report Civic Issue</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">{t('report.title')}</h1>
           
           {/* AI Analysis Results */}
           {aiAnalysis && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">AI Analysis Results</h3>
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">{t('report.ai.results')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-blue-800">Problem:</span> {aiAnalysis.problemIdentified}
+                  <span className="font-medium text-blue-800">{t('report.ai.problem')}:</span> {aiAnalysis.problemIdentified}
                 </div>
                 <div>
-                  <span className="font-medium text-blue-800">Department:</span> {aiAnalysis.department}
+                  <span className="font-medium text-blue-800">{t('report.ai.department')}:</span> {aiAnalysis.department}
                 </div>
                 <div>
-                  <span className="font-medium text-blue-800">Category:</span> {aiAnalysis.category}
+                  <span className="font-medium text-blue-800">{t('report.ai.category')}:</span> {aiAnalysis.category}
                 </div>
                 <div>
-                  <span className="font-medium text-blue-800">Priority:</span> {aiAnalysis.priority}
+                  <span className="font-medium text-blue-800">{t('report.ai.priority')}:</span> {aiAnalysis.priority}
                 </div>
+                {aiAnalysis.imageCaption && (
+                  <div>
+                    <span className="font-medium text-blue-800">{t('report.ai.imageCaption')}:</span> {aiAnalysis.imageCaption}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -271,7 +318,7 @@ const ReportIssue: React.FC = () => {
             {/* Title - Auto-filled by AI */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Title <span className="text-gray-500">(Auto-filled by AI)</span>
+                {t('report.form.title')} <span className="text-gray-500">{t('report.ai.autoFilled')}</span>
               </label>
               <input
                 type="text"
@@ -286,7 +333,7 @@ const ReportIssue: React.FC = () => {
             {/* Description - Auto-filled by AI */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description <span className="text-gray-500">(Auto-filled by AI)</span>
+                {t('report.form.description')} <span className="text-gray-500">{t('report.ai.autoFilled')}</span>
               </label>
               <div className="space-y-3">
                 <textarea

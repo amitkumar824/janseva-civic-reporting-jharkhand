@@ -46,15 +46,52 @@ class EnhancedCivicAnalyzer:
             return None
 
     def generate_caption(self, image):
-        """Generate caption from image using BLIP"""
+        """Generate caption from image using BLIP with civic issue focus"""
         try:
             if image is None:
                 return "No image provided"
             
-            inputs = self.processor(images=image, return_tensors="pt")
-            out = self.model.generate(**inputs, max_new_tokens=50)
-            caption = self.processor.decode(out[0], skip_special_tokens=True)
-            return caption
+            # Use more specific prompts for civic issues
+            prompts = [
+                "a photo showing a civic issue: ",
+                "a photo of a problem in the city: ",
+                "a photo of infrastructure issue: ",
+                "a photo of public service problem: "
+            ]
+            
+            best_caption = "Image analysis failed"
+            best_score = 0
+            
+            for prompt in prompts:
+                try:
+                    inputs = self.processor(images=image, text=prompt, return_tensors="pt")
+                    out = self.model.generate(**inputs, max_new_tokens=50)
+                    caption = self.processor.decode(out[0], skip_special_tokens=True)
+                    
+                    # Score the caption based on civic issue keywords
+                    civic_keywords = [
+                        "road", "street", "light", "water", "garbage", "drainage", 
+                        "traffic", "signal", "park", "damage", "broken", "leak",
+                        "pothole", "dirty", "clean", "problem", "issue"
+                    ]
+                    
+                    score = sum(1 for keyword in civic_keywords if keyword.lower() in caption.lower())
+                    
+                    if score > best_score:
+                        best_score = score
+                        best_caption = caption
+                        
+                except Exception as e:
+                    continue
+            
+            # If no good civic caption found, use default
+            if best_score == 0:
+                inputs = self.processor(images=image, return_tensors="pt")
+                out = self.model.generate(**inputs, max_new_tokens=50)
+                best_caption = self.processor.decode(out[0], skip_special_tokens=True)
+            
+            return best_caption
+            
         except Exception as e:
             print(f"Error generating caption: {e}")
             return "Image analysis failed"
@@ -89,7 +126,7 @@ class EnhancedCivicAnalyzer:
         
         text = text.lower()
         
-        # Enhanced Hinglish to English mappings
+        # Enhanced Hinglish to English mappings - Fixed to avoid conflicts
         replacements = {
             "paani": "water",
             "gaddha": "pothole",
@@ -98,55 +135,6 @@ class EnhancedCivicAnalyzer:
             "light": "streetlight",
             "kooda": "garbage",
             "dustbin": "dustbin",
-            "pipe": "pipeline",
-            "leak": "leakage",
-            "nala": "drainage",
-            "gutter": "drainage",
-            "traffic": "traffic",
-            "signal": "traffic signal",
-            "sadak": "road",
-            "rasta": "road",
-            "sarak": "road",
-            "pani": "water",
-            "jal": "water",
-            "tap": "water tap",
-            "nal": "water tap",
-            "toilet": "toilet",
-            "shouchalaya": "toilet",
-            "bathroom": "toilet",
-            "street": "street",
-            "gali": "street",
-            "marg": "street",
-            "bridge": "bridge",
-            "pul": "bridge",
-            "park": "park",
-            "bagicha": "park",
-            "garden": "park",
-            "hospital": "hospital",
-            "aspatal": "hospital",
-            "school": "school",
-            "vidyalaya": "school",
-            "college": "college",
-            "university": "university",
-            "market": "market",
-            "bazaar": "market",
-            "shop": "shop",
-            "dukaan": "shop",
-            "bus": "bus",
-            "train": "train",
-            "station": "station",
-            "stop": "bus stop",
-            "signal": "traffic signal",
-            "light": "streetlight",
-            "bulb": "light bulb",
-            "fan": "fan",
-            "ac": "air conditioning",
-            "cooler": "air cooler",
-            "heater": "heater",
-            "gas": "gas",
-            "petrol": "petrol",
-            "diesel": "diesel",
-            "fuel": "fuel",
             "fire": "fire",
             "aag": "fire",
             "smoke": "smoke",
@@ -180,8 +168,12 @@ class EnhancedCivicAnalyzer:
             "sahayata": "support"
         }
         
-        for hindi, english in replacements.items():
-            text = text.replace(hindi, english)
+        # Sort replacements by length (longest first) to avoid partial matches
+        sorted_replacements = sorted(replacements.items(), key=lambda x: len(x[0]), reverse=True)
+        
+        for hindi, english in sorted_replacements:
+            # Use word boundaries to avoid partial matches
+            text = re.sub(r'\b' + re.escape(hindi) + r'\b', english, text)
         
         return text
 
@@ -189,19 +181,20 @@ class EnhancedCivicAnalyzer:
         """Enhanced problem identification"""
         combined = (caption + " " + text).lower()
         
-        # Enhanced problem detection patterns
+        # Enhanced problem detection patterns with better matching
         problems = {
             "Pothole / Road Damage": [
-                "pothole", "road damage", "road broken", "road crack", "road hole",
-                "sadak", "rasta", "sarak", "gaddha", "hole", "crack", "damage"
+                "pothole", "potholes", "road damage", "road broken", "road crack", "road hole",
+                "sadak", "rasta", "sarak", "gaddha", "hole", "holes", "crack", "damage",
+                "road has", "road with", "broken road", "damaged road"
             ],
             "Streetlight / Electrical Issue": [
                 "streetlight", "street light", "light", "bulb", "electricity", "electrical",
                 "power", "bijli", "light broken", "light not working", "dark", "andhera"
             ],
             "Water Leakage / Pipeline Issue": [
-                "water", "leak", "leakage", "pipeline", "pipe", "tap", "nal", "pani", "jal",
-                "water supply", "water problem", "no water", "water pressure"
+                "water leak", "water leakage", "pipeline", "pipe leak", "tap leak",
+                "pani", "jal", "water supply", "water problem", "no water", "water pressure"
             ],
             "Garbage / Sanitation Issue": [
                 "garbage", "trash", "waste", "dustbin", "kooda", "sanitation", "clean",
@@ -212,8 +205,8 @@ class EnhancedCivicAnalyzer:
                 "flood", "water accumulation", "blocked drain"
             ],
             "Traffic / Signal Issue": [
-                "traffic", "signal", "traffic signal", "road safety", "accident",
-                "congestion", "jam", "traffic light", "signal not working"
+                "traffic signal", "traffic light", "signal broken", "signal not working",
+                "traffic management", "road safety", "accident", "congestion", "jam"
             ],
             "Park / Public Space Issue": [
                 "park", "garden", "public space", "playground", "bagicha",
@@ -225,10 +218,14 @@ class EnhancedCivicAnalyzer:
             ]
         }
         
-        # Count matches for each problem type
+        # Count matches for each problem type with better scoring
         problem_scores = {}
         for problem, keywords in problems.items():
-            score = sum(1 for keyword in keywords if keyword in combined)
+            score = 0
+            for keyword in keywords:
+                # Use word boundaries for more accurate matching
+                if re.search(r'\b' + re.escape(keyword) + r'\b', combined):
+                    score += 1
             if score > 0:
                 problem_scores[problem] = score
         

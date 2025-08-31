@@ -12,7 +12,7 @@ export interface CustomAIAnalysisResult {
     priority: string;
     category: string;
     location: string;
-    confidence: number;
+    aiConfidence: string;
   };
   error?: string;
 }
@@ -55,14 +55,19 @@ export const analyzeCivicIssueWithCustomModel = async (
       imagePath = await saveBase64Image(imageData);
     }
 
-    // Prepare command line arguments
-    const args = ['ml-models/civic_analyzer.py'];
+    // Prepare command line arguments for enhanced civic analyzer
+    const args = ['ml-models/enhanced_civic_analyzer.py'];
     
-    if (imagePath) args.push('--image', imagePath);
-    if (text) args.push('--text', text);
-    if (audioPath) args.push('--audio', audioPath);
-    if (location) args.push('--location', location);
-    args.push('--output', 'json');
+    // Create input JSON for the enhanced analyzer
+    const inputData = {
+      imageData: imageData,
+      text: text,
+      audioData: audioPath,
+      location: location
+    };
+    
+    // Pass JSON input as command line argument
+    args.push(JSON.stringify(inputData));
 
     // Execute Python script
     const result = await executePythonScript(args);
@@ -176,20 +181,26 @@ const saveBase64Image = async (base64Data: string): Promise<string> => {
  * @returns AIAnalysisResult
  */
 export const convertToStandardFormat = (customResult: CustomAIAnalysisResult): AIAnalysisResult => {
-  if (!customResult.success || !customResult.data) {
+  if (!customResult.success) {
     // Fallback to mock result
     return getMockImageAnalysis();
   }
 
-  const data = customResult.data;
+  // Handle both direct data and nested data structure
+  const data = customResult.data || customResult;
+  
+  // Type guard to ensure we have the correct data structure
+  if (!data || typeof data !== 'object' || !('imageCaption' in data)) {
+    throw new Error('Invalid AI model output structure');
+  }
   
   return {
     caption: data.imageCaption,
     category: data.category,
-    title: `${data.problemIdentified} - ${data.department}`,
+    title: data.problemIdentified ? `${data.problemIdentified} - ${data.department}` : 'Civic Issue Detected',
     priority: priorityToNumber(data.priority),
     department: data.department,
-    confidence: data.confidence,
+    confidence: data.aiConfidence === 'high' ? 0.9 : data.aiConfidence === 'medium' ? 0.7 : 0.5,
     tags: extractTagsFromText(data.complaintText + ' ' + data.imageCaption)
   };
 };
@@ -286,6 +297,30 @@ export const analyzeImageWithAI = async (imageData: string): Promise<AIAnalysisR
     return convertToStandardFormat(customResult);
   } catch (error) {
     console.error('Custom AI analysis failed, falling back to mock:', error);
+    return getMockImageAnalysis();
+  }
+};
+
+/**
+ * Enhanced AI analysis function that accepts multiple input types
+ * @param imageData - Base64 encoded image (optional)
+ * @param text - Text description (optional)
+ * @param audioData - Audio data (optional)
+ * @param location - Location data (optional)
+ * @returns Promise<AIAnalysisResult>
+ */
+export const analyzeCivicIssueWithMultipleInputs = async (
+  imageData?: string,
+  text?: string,
+  audioData?: string,
+  location?: string
+): Promise<AIAnalysisResult> => {
+  try {
+    // Use the enhanced civic analyzer for all cases
+    const customResult = await analyzeCivicIssueWithCustomModel(imageData, text, audioData, location);
+    return convertToStandardFormat(customResult);
+  } catch (error) {
+    console.error('Enhanced AI analysis failed, falling back to mock:', error);
     return getMockImageAnalysis();
   }
 };

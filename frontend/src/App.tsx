@@ -6,25 +6,29 @@ import AdminDashboard from './components/AdminDashboard';
 import ReportIssue from './components/ReportIssue';
 import IssueDetail from './components/IssueDetail';
 import CurrentIssues from './components/CurrentIssues';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import './App.css';
 
 function App() {
   return (
-    <LanguageProvider>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/citizen" element={<CitizenDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/report" element={<ReportIssue />} />
-          <Route path="/issue/:id" element={<IssueDetail />} />
-          <Route path="/issues" element={<CurrentIssues />} />
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </div>
-    </LanguageProvider>
+    <AuthProvider>
+      <LanguageProvider>
+        <Router>
+          <div className="App">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/citizen" element={<CitizenDashboard />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/report" element={<ReportIssue />} />
+              <Route path="/issue/:id" element={<IssueDetail />} />
+              <Route path="/issues" element={<CurrentIssues />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
+          </div>
+        </Router>
+      </LanguageProvider>
+    </AuthProvider>
   );
 }
 

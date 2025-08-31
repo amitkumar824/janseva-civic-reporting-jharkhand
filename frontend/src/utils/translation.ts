@@ -72,7 +72,7 @@ export const translations = {
   en: {
     header: {
       title: "Nagar Sahayak",
-      subtitle: "AI-Powered Civic Issue Reporting",
+      subtitle: "AI-Powered Civic Issue Reporting System",
       language: "हिंदी",
       home: "Home",
       reportIssue: "Report Issue",
@@ -81,10 +81,10 @@ export const translations = {
     },
     home: {
       hero: {
-        title: "Transform Civic Issue Reporting with AI",
-        subtitle: "Report, track, and resolve civic issues efficiently using advanced AI technology. Make your city better, one issue at a time.",
-        reportButton: "Report Issue",
-        viewIssuesButton: "View Current Issues"
+        title: "Welcome to Nagar Sahayak",
+        subtitle: "Your voice, our priority. Report your city's problems and see their solutions. Join us for transparent and fast service.",
+        reportButton: "Citizen Portal",
+        viewIssuesButton: "Government Portal"
       },
       features: {
         title: "Powerful Features for Better Civic Management",
@@ -181,7 +181,10 @@ export const translations = {
         problem: "Problem",
         department: "Department",
         category: "Category",
-        priority: "Priority"
+        priority: "Priority",
+        autoFilled: "(Auto-filled by AI)",
+        confidence: "AI Confidence",
+        imageCaption: "Image Analysis"
       },
       voice: {
         record: "Voice Record",
@@ -339,7 +342,10 @@ export const translations = {
         problem: "समस्या",
         department: "विभाग",
         category: "श्रेणी",
-        priority: "प्राथमिकता"
+        priority: "प्राथमिकता",
+        autoFilled: "(AI द्वारा स्वचालित भरा गया)",
+        confidence: "AI विश्वास",
+        imageCaption: "छवि विश्लेषण"
       },
       voice: {
         record: "आवाज रिकॉर्ड करें",

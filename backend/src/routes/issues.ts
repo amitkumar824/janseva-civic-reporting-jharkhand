@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { body, validationResult, query } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import { uploadToCloudinary } from '../services/cloudinary';
-import { analyzeImageWithAI } from '../services/aiService';
+import { analyzeCivicIssueWithMultipleInputs } from '../services/customAIService';
 import { createError, badRequest, notFound, forbidden } from '../middleware/errorHandler';
 
 const router = Router();
@@ -56,7 +56,7 @@ router.post('/', validateIssueCreation, async (req: AuthRequest, res: Response) 
         coordinates: coordinates ? JSON.parse(coordinates) : null,
         priority,
         reporterId: userId,
-        images: []
+        images: JSON.stringify([])
       },
       include: {
         reporter: {
@@ -332,7 +332,7 @@ router.post('/:id/images', async (req: AuthRequest, res: Response) => {
     const updatedIssue = await prisma.issue.update({
       where: { id },
       data: {
-        images: [...existingIssue.images, ...uploadedUrls]
+        images: JSON.stringify([...JSON.parse(existingIssue.images || '[]'), ...uploadedUrls])
       }
     });
 
@@ -414,7 +414,7 @@ router.post('/analyze', async (req, res) => {
   try {
     const { imageData, text, audioData, location } = req.body;
     
-    const result = await analyzeImageWithAI(imageData, text, audioData, location);
+    const result = await analyzeCivicIssueWithMultipleInputs(imageData, text, audioData, location);
     
     res.json(result);
   } catch (error) {
