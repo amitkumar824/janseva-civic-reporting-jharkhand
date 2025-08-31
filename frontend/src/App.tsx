@@ -123,6 +123,9 @@ export class ApiService {
       if (response.ok) {
         return { data: result, error: null };
       } else {
+      }
+    }
+  }
   // Submit a new issue
   public async submitIssue(issueData: any): Promise<any> {
     try {
