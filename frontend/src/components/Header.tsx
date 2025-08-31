@@ -60,6 +60,12 @@ const Header: React.FC = () => {
             >
               Metrics
             </Link>
+            <Link
+              to="/technical"
+              className="px-3 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 font-medium transition-all"
+            >
+              Tech Demo
+            </Link>
           </nav>
 
           {/* Right Side */}

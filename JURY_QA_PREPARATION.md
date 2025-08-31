@@ -8,9 +8,9 @@
 
 1. **Ecosystem & Community**: 200M+ weekly downloads, largest developer community
 2. **Performance**: Virtual DOM and React 18's concurrent features provide optimal rendering
-3. **AI/ML Integration**: Superior ecosystem for integrating ML libraries and APIs
-4. **Industry Adoption**: Used by Facebook, Netflix, Airbnb - proven at enterprise scale
-5. **Government Projects**: Widely adopted in Indian e-governance (DigiLocker, MyGov, CoWIN)
+3. **AI/ML Integration**: Better ecosystem for integrating ML libraries and APIs
+4. **Industry Standard**: Used by Facebook, Netflix, Airbnb - proven at enterprise scale
+5. **Government Adoption**: Widely used in Indian e-governance (DigiLocker, MyGov, CoWIN)
 6. **Developer Productivity**: Rich tooling, debugging capabilities, and extensive documentation"
 
 **Technical Details to Mention:**
@@ -33,7 +33,7 @@
 4. **ML Analysis**: Custom model uses BLIP (image) + Whisper (speech)
 5. **Problem Identification**: Rule-based logic maps to civic categories
 6. **Structured Response**: JSON with category, priority, department
-7. **Auto-fill**: Frontend populates form fields automatically
+7. **Auto-fill**: Frontend automatically populates form fields
 
 **Code Example:**
 ```typescript
