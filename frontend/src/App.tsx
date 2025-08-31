@@ -6,6 +6,9 @@ import AdminDashboard from './components/AdminDashboard';
 import ReportIssue from './components/ReportIssue';
 import IssueDetail from './components/IssueDetail';
 import CurrentIssues from './components/CurrentIssues';
+import JuryPresentation from './components/JuryPresentation';
+import PerformanceMetrics from './components/PerformanceMetrics';
+import TechnicalDemo from './components/TechnicalDemo';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import './App.css';
@@ -13,6 +16,8 @@ import './App.css';
 function App() {
   return (
     <LanguageProvider>
+      <AuthProvider>
+        <Router>
       <div className="App">
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -21,9 +26,14 @@ function App() {
           <Route path="/report" element={<ReportIssue />} />
           <Route path="/issue/:id" element={<IssueDetail />} />
           <Route path="/issues" element={<CurrentIssues />} />
+          <Route path="/presentation" element={<JuryPresentation />} />
+              <Route path="/performance" element={<PerformanceMetrics />} />
+              <Route path="/technical" element={<TechnicalDemo />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
+        </Router>
+      </AuthProvider>
     </LanguageProvider>
   );
 }
