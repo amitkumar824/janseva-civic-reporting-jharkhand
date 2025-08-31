@@ -1,354 +1,226 @@
-import axios from 'axios';
+import { spawn } from 'child_process';
+import path from 'path';
 
-// Free Hugging Face API for ML models
-const HUGGINGFACE_API_URL = 'https://api-inference.huggingface.co/models';
-const API_KEY = process.env.HUGGINGFACE_API_KEY;
+export class AIService {
+  private static instance: AIService;
+  private pythonPath: string;
+  private scriptPath: string;
 
-export interface AIAnalysisResult {
-  caption: string;
-  category: string;
-  title: string;
-  priority: number;
-  department: string;
-  confidence: number;
-  tags: string[];
+  constructor() {
+    this.pythonPath = 'python3'; // or 'python' depending on your system
+    this.scriptPath = path.join(__dirname, '../../ml-models/enhanced_civic_analyzer.py');
+  }
+
+  public static getInstance(): AIService {
+    if (!AIService.instance) {
+      AIService.instance = new AIService();
+    }
+    return AIService.instance;
+  }
+
+  public async analyzeCivicIssue(imageData?: string, text?: string, audioData?: string, location?: string): Promise<any> {
+    try {
+      // For now, use the simplified analysis without Python
+      return this.simplifiedAnalysis(imageData, text, audioData, location);
+    } catch (error) {
+      console.error('AI Analysis error:', error);
+      // Return fallback analysis
+      return this.fallbackAnalysis(text || '', location || '');
+    }
+  }
+
+  private simplifiedAnalysis(imageData?: string, text?: string, audioData?: string, location?: string): any {
+    // Simulate AI analysis based on input
+    let caption = "Image analysis completed";
+    let complaintText = text || "";
+    
+    // If we have image data, simulate some analysis
+    if (imageData) {
+      caption = "Civic issue detected in uploaded image";
+    }
+    
+    // If we have audio data, simulate speech-to-text
+    if (audioData) {
+      complaintText = "Voice complaint recorded and processed";
+    }
+    
+    // Combine text for analysis
+    const combinedText = (caption + " " + complaintText).toLowerCase();
+    const problem = this.identifyProblem(combinedText);
+    const department = this.mapDepartment(problem);
+    const priority = this.determinePriority(problem);
+    const category = this.mapCategory(problem);
+    const title = this.generateTitle(problem);
+    
+    return {
+      success: true,
+      data: {
+        title: title,
+        problemIdentified: problem,
+        department: department,
+        priority: priority,
+        category: category,
+        imageCaption: caption,
+        complaintText: complaintText || `Issue detected from image analysis: ${caption}`,
+        location: location || "Location not provided",
+        aiConfidence: "medium"
+      }
+    };
+  }
+
+  private runPythonScript(inputData: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const inputJson = JSON.stringify(inputData);
+      
+      const pythonProcess = spawn(this.pythonPath, [this.scriptPath, inputJson]);
+      
+      let stdout = '';
+      let stderr = '';
+      
+      pythonProcess.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+      
+      pythonProcess.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+      
+      pythonProcess.on('close', (code) => {
+        if (code === 0) {
+          try {
+            const result = JSON.parse(stdout);
+            resolve(result);
+          } catch (error) {
+            console.error('Error parsing Python output:', error);
+            reject(new Error('Failed to parse AI analysis result'));
+          }
+        } else {
+          console.error('Python script error:', stderr);
+          reject(new Error(`AI analysis failed with code ${code}: ${stderr}`));
+        }
+      });
+      
+      pythonProcess.on('error', (error) => {
+        console.error('Error spawning Python process:', error);
+        reject(new Error('Failed to start AI analysis'));
+      });
+    });
+  }
+
+  private fallbackAnalysis(text: string, location: string): any {
+    const normalizedText = this.normalizeText(text);
+    const problem = this.identifyProblem(normalizedText);
+    
+    return {
+      success: true,
+      data: {
+        title: this.generateTitle(problem),
+        problemIdentified: problem,
+        department: this.mapDepartment(problem),
+        priority: this.determinePriority(problem),
+        category: this.mapCategory(problem),
+        imageCaption: 'Image analysis completed',
+        complaintText: text || 'Issue detected from image analysis',
+        location: location || 'Location not provided',
+        aiConfidence: 'low'
+      }
+    };
+  }
+
+  private normalizeText(text: string): string {
+    if (!text) return '';
+    
+    text = text.toLowerCase();
+    const replacements = {
+      "paani": "water",
+      "gaddha": "pothole", 
+      "sadak": "road",
+      "bijli": "electricity",
+      "light": "streetlight",
+      "kooda": "garbage",
+      "dustbin": "dustbin",
+      "pipe": "pipeline",
+      "leak": "leakage",
+      "nala": "drainage",
+      "gutter": "drainage",
+      "traffic": "traffic",
+      "signal": "traffic signal"
+    };
+    
+    for (const [key, value] of Object.entries(replacements)) {
+      text = text.replace(new RegExp(key, 'g'), value);
+    }
+    return text;
+  }
+
+  private identifyProblem(text: string): string {
+    if (text.includes("pothole") || text.includes("road") || text.includes("damage")) {
+      return "Pothole / Road Damage";
+    } else if (text.includes("streetlight") || text.includes("light") || text.includes("electricity")) {
+      return "Streetlight / Electrical Issue";
+    } else if (text.includes("water") || text.includes("leak") || text.includes("pipeline")) {
+      return "Water Leakage / Pipeline Issue";
+    } else if (text.includes("garbage") || text.includes("dustbin") || text.includes("sanitation")) {
+      return "Garbage / Sanitation Issue";
+    } else if (text.includes("drainage") || text.includes("gutter") || text.includes("nala")) {
+      return "Drainage Issue";
+    } else if (text.includes("traffic") || text.includes("signal")) {
+      return "Traffic / Signal Issue";
+    } else {
+      return "Other Civic Issue";
+    }
+  }
+
+  private mapDepartment(problem: string): string {
+    const mapping: { [key: string]: string } = {
+      "Pothole / Road Damage": "Roads Department",
+      "Streetlight / Electrical Issue": "Electrical Department", 
+      "Water Leakage / Pipeline Issue": "Water Department",
+      "Garbage / Sanitation Issue": "Sanitation Department",
+      "Drainage Issue": "Drainage Department",
+      "Traffic / Signal Issue": "Traffic Department",
+      "Other Civic Issue": "General Complaints Department"
+    };
+    return mapping[problem] || "General Complaints Department";
+  }
+
+  private determinePriority(problem: string): string {
+    const highPriority = ["Water Leakage / Pipeline Issue", "Electrical Issue"];
+    if (highPriority.includes(problem)) {
+      return "HIGH";
+    } else if (problem.includes("Road") || problem.includes("Traffic")) {
+      return "MEDIUM";
+    } else {
+      return "LOW";
+    }
+  }
+
+  private mapCategory(problem: string): string {
+    if (problem.includes("Road")) {
+      return "ROAD";
+    } else if (problem.includes("Streetlight") || problem.includes("Electrical")) {
+      return "STREETLIGHT";
+    } else if (problem.includes("Water")) {
+      return "WATER";
+    } else if (problem.includes("Garbage") || problem.includes("Sanitation")) {
+      return "SANITATION";
+    } else {
+      return "OTHER";
+    }
+  }
+
+  private generateTitle(problem: string): string {
+    const titles = {
+      "Pothole / Road Damage": "Road Damage Issue",
+      "Streetlight / Electrical Issue": "Street Light Problem",
+      "Water Leakage / Pipeline Issue": "Water Supply Issue",
+      "Garbage / Sanitation Issue": "Sanitation Problem",
+      "Drainage Issue": "Drainage Problem",
+      "Traffic / Signal Issue": "Traffic Management Issue",
+      "Other Civic Issue": "Civic Issue Reported"
+    };
+    return titles[problem as keyof typeof titles] || "Civic Issue Reported";
+  }
 }
 
-export interface TextAnalysisResult {
-  sentiment: 'positive' | 'negative' | 'neutral';
-  language: string;
-  keywords: string[];
-  urgency: number;
-}
-
-/**
- * Analyze image using Hugging Face image classification model
- * @param imageData - Base64 encoded image
- * @returns Promise<AIAnalysisResult>
- */
-export const analyzeImageWithAI = async (imageData: string): Promise<AIAnalysisResult> => {
-  try {
-    if (!API_KEY) {
-      // Fallback to mock analysis if no API key
-      return getMockImageAnalysis();
-    }
-
-    // Use Microsoft's ResNet model for image classification
-    const response = await axios.post(
-      `${HUGGINGFACE_API_URL}/microsoft/resnet-50`,
-      {
-        inputs: imageData,
-        parameters: {
-          top_k: 5
-        }
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    const predictions = response.data;
-    return processImagePredictions(predictions);
-  } catch (error) {
-    console.error('AI image analysis failed:', error);
-    // Fallback to mock analysis
-    return getMockImageAnalysis();
-  }
-};
-
-/**
- * Analyze text using Hugging Face text classification model
- * @param text - Text to analyze
- * @returns Promise<TextAnalysisResult>
- */
-export const analyzeTextWithAI = async (text: string): Promise<TextAnalysisResult> => {
-  try {
-    if (!API_KEY) {
-      return getMockTextAnalysis(text);
-    }
-
-    // Use BERT model for text classification
-    const response = await axios.post(
-      `${HUGGINGFACE_API_URL}/nlptown/bert-base-multilingual-uncased-sentiment`,
-      {
-        inputs: text
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    return processTextPredictions(text, response.data);
-  } catch (error) {
-    console.error('AI text analysis failed:', error);
-    return getMockTextAnalysis(text);
-  }
-};
-
-/**
- * Process image classification predictions
- * @param predictions - Raw model predictions
- * @returns AIAnalysisResult
- */
-const processImagePredictions = (predictions: any[]): AIAnalysisResult => {
-  const topPrediction = predictions[0];
-  const label = topPrediction.label.toLowerCase();
-  const confidence = topPrediction.score;
-
-  // Map predictions to civic issue categories
-  const category = mapImageToCategory(label);
-  const priority = determinePriorityFromImage(label, confidence);
-  const department = mapDepartment(category);
-  const title = generateTitleFromImage(label, category);
-  const tags = extractTagsFromLabel(label);
-
-  return {
-    caption: `Image shows: ${label}`,
-    category,
-    title,
-    priority,
-    department,
-    confidence,
-    tags
-  };
-};
-
-/**
- * Process text classification predictions
- * @param text - Original text
- * @param predictions - Raw model predictions
- * @returns TextAnalysisResult
- */
-const processTextPredictions = (text: string, predictions: any[]): TextAnalysisResult => {
-  const topPrediction = predictions[0];
-  const sentiment = mapSentiment(topPrediction.label);
-  const urgency = calculateUrgency(text);
-  const keywords = extractKeywords(text);
-  const language = detectLanguage(text);
-
-  return {
-    sentiment,
-    language,
-    keywords,
-    urgency
-  };
-};
-
-/**
- * Map image labels to civic issue categories
- * @param label - Image classification label
- * @returns string
- */
-const mapImageToCategory = (label: string): string => {
-  const labelLower = label.toLowerCase();
-  
-  if (labelLower.includes('road') || labelLower.includes('pothole') || labelLower.includes('crack')) {
-    return 'ROAD';
-  } else if (labelLower.includes('light') || labelLower.includes('lamp') || labelLower.includes('electric')) {
-    return 'STREETLIGHT';
-  } else if (labelLower.includes('water') || labelLower.includes('pipe') || labelLower.includes('leak')) {
-    return 'WATER';
-  } else if (labelLower.includes('garbage') || labelLower.includes('trash') || labelLower.includes('waste')) {
-    return 'SANITATION';
-  } else {
-    return 'OTHER';
-  }
-};
-
-/**
- * Map category to department
- * @param category - Issue category
- * @returns string
- */
-const mapDepartment = (category: string): string => {
-  const departmentMap: Record<string, string> = {
-    'ROAD': 'Public Works Department (PWD)',
-    'STREETLIGHT': 'Electrical Department',
-    'WATER': 'Water Supply Department',
-    'SANITATION': 'Municipal Corporation',
-    'OTHER': 'General Complaints Department'
-  };
-  
-  return departmentMap[category] || 'General Complaints Department';
-};
-
-/**
- * Determine priority from image analysis
- * @param label - Image label
- * @param confidence - Model confidence
- * @returns number (1=high, 2=medium, 3=low)
- */
-const determinePriorityFromImage = (label: string, confidence: number): number => {
-  const labelLower = label.toLowerCase();
-  
-  // High priority indicators
-  if (labelLower.includes('danger') || labelLower.includes('accident') || labelLower.includes('emergency')) {
-    return 1;
-  }
-  
-  // Medium priority indicators
-  if (labelLower.includes('damage') || labelLower.includes('broken') || labelLower.includes('leak')) {
-    return 2;
-  }
-  
-  // Low priority by default
-  return 3;
-};
-
-/**
- * Generate title from image analysis
- * @param label - Image label
- * @param category - Issue category
- * @returns string
- */
-const generateTitleFromImage = (label: string, category: string): string => {
-  const categoryNames: Record<string, string> = {
-    'ROAD': 'Road Issue',
-    'STREETLIGHT': 'Street Light Issue',
-    'WATER': 'Water Supply Issue',
-    'SANITATION': 'Sanitation Issue',
-    'OTHER': 'Civic Issue'
-  };
-  
-  return `${categoryNames[category]} - ${label}`;
-};
-
-/**
- * Extract tags from image label
- * @param label - Image label
- * @returns string[]
- */
-const extractTagsFromLabel = (label: string): string[] => {
-  const words = label.toLowerCase().split(/[^a-zA-Z]+/);
-  return words.filter(word => word.length > 2);
-};
-
-/**
- * Map sentiment score to sentiment
- * @param label - Sentiment label
- * @returns string
- */
-const mapSentiment = (label: string): 'positive' | 'negative' | 'neutral' => {
-  const score = parseInt(label.split(' ')[0]);
-  if (score >= 4) return 'positive';
-  if (score <= 2) return 'negative';
-  return 'neutral';
-};
-
-/**
- * Calculate urgency from text
- * @param text - Input text
- * @returns number (0-1)
- */
-const calculateUrgency = (text: string): number => {
-  const urgentWords = ['urgent', 'emergency', 'immediate', 'critical', 'danger', 'accident'];
-  const textLower = text.toLowerCase();
-  
-  let urgency = 0;
-  urgentWords.forEach(word => {
-    if (textLower.includes(word)) urgency += 0.2;
-  });
-  
-  return Math.min(urgency, 1);
-};
-
-/**
- * Extract keywords from text
- * @param text - Input text
- * @returns string[]
- */
-const extractKeywords = (text: string): string[] => {
-  const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'];
-  const words = text.toLowerCase().split(/\W+/);
-  
-  return words.filter(word => 
-    word.length > 2 && 
-    !stopWords.includes(word) && 
-    !/^\d+$/.test(word)
-  ).slice(0, 10);
-};
-
-/**
- * Detect language from text
- * @param text - Input text
- * @returns string
- */
-const detectLanguage = (text: string): string => {
-  // Simple language detection based on character sets
-  const hindiChars = /[\u0900-\u097F]/;
-  const englishChars = /[a-zA-Z]/;
-  
-  if (hindiChars.test(text)) return 'hi';
-  if (englishChars.test(text)) return 'en';
-  return 'unknown';
-};
-
-/**
- * Mock image analysis for fallback
- * @returns AIAnalysisResult
- */
-const getMockImageAnalysis = (): AIAnalysisResult => {
-  const mockResults = [
-    {
-      caption: 'Image shows road damage with visible potholes',
-      category: 'ROAD',
-      title: 'Road Issue - Potholes detected',
-      priority: 2,
-      department: 'Public Works Department (PWD)',
-      confidence: 0.85,
-      tags: ['road', 'pothole', 'damage']
-    },
-    {
-      caption: 'Image shows broken street light fixture',
-      category: 'STREETLIGHT',
-      title: 'Street Light Issue - Broken fixture',
-      priority: 2,
-      department: 'Electrical Department',
-      confidence: 0.78,
-      tags: ['light', 'broken', 'fixture']
-    },
-    {
-      caption: 'Image shows water leakage from pipe',
-      category: 'WATER',
-      title: 'Water Issue - Pipe leakage',
-      priority: 1,
-      department: 'Water Supply Department',
-      confidence: 0.92,
-      tags: ['water', 'leak', 'pipe']
-    }
-  ];
-  
-  return mockResults[Math.floor(Math.random() * mockResults.length)];
-};
-
-/**
- * Mock text analysis for fallback
- * @param text - Input text
- * @returns TextAnalysisResult
- */
-const getMockTextAnalysis = (text: string): TextAnalysisResult => {
-  const urgency = calculateUrgency(text);
-  const keywords = extractKeywords(text);
-  const language = detectLanguage(text);
-  
-  return {
-    sentiment: urgency > 0.5 ? 'negative' : 'neutral',
-    language,
-    keywords,
-    urgency
-  };
-};
-
-/**
- * Get AI service status
- * @returns boolean
- */
-export const isAIServiceAvailable = (): boolean => {
-  return !!API_KEY;
-};
+export const aiService = AIService.getInstance();

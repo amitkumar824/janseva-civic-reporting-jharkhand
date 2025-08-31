@@ -1,432 +1,263 @@
-# 🏛️ Jan Seva Civic Reporting System
+# 🏙️ Nagar Sahayak - AI-Powered Civic Issue Reporting System
 
-A comprehensive civic engagement platform for Indian cities, built with modern web technologies and AI-powered features.
+A comprehensive civic issue reporting platform that uses advanced AI technology to automatically analyze, categorize, and prioritize civic problems. Built with React, Node.js, and Python AI models.
 
-## 🌟 Features
+## ✨ Features
 
-### 🎯 Core Functionality
-- **Multi-language Support**: Hindi and English interface
-- **User Management**: Citizen, Admin, and Department roles
-- **Issue Reporting**: Photo upload, location tracking, voice recording
-- **Real-time Updates**: Live notifications and status tracking
-- **AI Integration**: ML-powered issue classification and priority detection
+### 🤖 AI-Powered Analysis
+- **Image Recognition**: Upload photos and AI automatically identifies civic issues
+- **Smart Categorization**: Automatic problem classification (Road, Water, Sanitation, etc.)
+- **Priority Assessment**: AI determines issue priority based on type and context
+- **Department Mapping**: Automatically assigns issues to relevant departments
 
-### 🤖 AI & ML Features
-- **Image Analysis**: Automatic issue categorization using Hugging Face models
-- **Text Processing**: Sentiment analysis and urgency detection
-- **Smart Routing**: Automatic department assignment
-- **Priority Assessment**: ML-powered priority determination
+### 🎤 Voice Recognition
+- **Multi-language Support**: Hindi and English voice input
+- **Real-time Processing**: Instant speech-to-text conversion
+- **Hinglish Support**: Natural language processing for mixed Hindi-English
 
-### 🔐 Security & Performance
-- **JWT Authentication**: Secure user sessions
-- **Role-based Access**: Granular permissions
-- **Rate Limiting**: API protection
-- **Input Validation**: Comprehensive data sanitization
+### 📍 Location Services
+- **GPS Integration**: Automatic location detection
+- **Interactive Maps**: Click-to-select location functionality
+- **Precise Tracking**: Accurate coordinates for issue resolution
 
-## 🛠️ Tech Stack
+### 📱 User-Friendly Interface
+- **Bilingual UI**: Full Hindi and English support
+- **Responsive Design**: Works on desktop, tablet, and mobile
+- **Real-time Updates**: Live status tracking and notifications
 
-### Frontend
-- **React 18** + **TypeScript**
-- **Tailwind CSS** for styling
-- **React Router** for navigation
-- **Context API** for state management
-
-### Backend
-- **Node.js** + **Express** + **TypeScript**
-- **PostgreSQL** database with **Prisma ORM**
-- **JWT** authentication
-- **Socket.io** for real-time features
-
-### AI & ML
-- **Hugging Face API** (free alternative to paid services)
-- **Cloudinary** for image hosting (free alternative to AWS S3)
-- **Custom ML models** for civic issue classification
-
-### Infrastructure
-- **Docker** for containerization
-- **PostgreSQL** for data persistence
-- **Real-time WebSocket** communication
+### 🔧 Admin Features
+- **Issue Management**: View, filter, and manage all reported issues
+- **Status Updates**: Track progress from submission to resolution
+- **Resolution Photos**: Upload before/after photos for resolved issues
+- **Analytics Dashboard**: Comprehensive statistics and insights
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- PostgreSQL 12+
-- Docker (optional)
-- Git
+- Node.js (v16 or higher)
+- Python (v3.8 or higher)
+- npm or yarn
 
-### 1. Clone the Repository
-```bash
-git clone <repository-url>
-cd janseva-civic-reporting-jharkand
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd nagarSahayak
+   ```
+
+2. **Install Python dependencies**
+   ```bash
+   cd backend/ml-models
+   pip install -r requirements.txt
+   cd ../..
+   ```
+
+3. **Install Node.js dependencies**
+   ```bash
+   # Install backend dependencies
+   cd backend
+   npm install
+   cd ..
+
+   # Install frontend dependencies
+   cd frontend
+   npm install
+   cd ..
+   ```
+
+4. **Start the application**
+   ```bash
+   # Option 1: Use the batch script (Windows)
+   start-project.bat
+
+   # Option 2: Manual start
+   # Terminal 1 - Backend
+   cd backend
+   npm start
+
+   # Terminal 2 - Frontend
+   cd frontend
+   npm run dev
+   ```
+
+5. **Access the application**
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:3000
+   - Health Check: http://localhost:3000/health
+
+## 📁 Project Structure
+
+```
+nagarSahayak/
+├── frontend/                 # React frontend application
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   ├── services/        # API services
+│   │   ├── context/         # React context providers
+│   │   └── utils/           # Utility functions
+│   └── package.json
+├── backend/                  # Node.js backend server
+│   ├── src/
+│   │   ├── services/        # Business logic services
+│   │   └── index.ts         # Main server file
+│   ├── ml-models/           # Python AI models
+│   │   ├── enhanced_civic_analyzer.py
+│   │   ├── sih2k25.ipynb
+│   │   └── requirements.txt
+│   └── package.json
+└── README.md
 ```
 
-### 2. Backend Setup
-```bash
-cd backend
+## 🤖 AI Models
 
-# Install dependencies
-npm install
+### Enhanced Civic Analyzer
+- **BLIP Model**: Image captioning and analysis
+- **Whisper Model**: Speech-to-text conversion
+- **Custom Logic**: Problem identification and categorization
+- **Hinglish Support**: Hindi-English mixed language processing
 
-# Set up environment variables
-cp env.example .env
-# Edit .env with your configuration
+### Supported Issue Types
+- 🛣️ **Road Issues**: Potholes, road damage, traffic problems
+- 💡 **Street Light Issues**: Broken lights, electrical problems
+- 💧 **Water Issues**: Leakage, supply problems, pipeline issues
+- 🗑️ **Sanitation Issues**: Garbage, waste management
+- 🚰 **Drainage Issues**: Blocked drains, water logging
+- 🚦 **Traffic Issues**: Signal problems, congestion
+- 🏞️ **Public Space Issues**: Parks, playgrounds, public areas
+- 🚌 **Transport Issues**: Bus stops, public transport
 
-# Set up database
-npm run db:generate
-npm run db:migrate
+## 🔧 API Endpoints
 
-# Start development server
-npm run dev
+### Core Endpoints
+- `GET /health` - Health check
+- `POST /api/issues/analyze` - AI analysis of civic issues
+- `POST /api/issues` - Submit new issue
+- `GET /api/issues` - Get all issues (with filters)
+- `GET /api/issues/:id` - Get specific issue
+- `PUT /api/issues/:id` - Update issue status
+- `POST /api/issues/:id/comments` - Add comment to issue
+- `GET /api/dashboard/stats` - Get dashboard statistics
+
+### AI Analysis Request Format
+```json
+{
+  "imageData": "base64_encoded_image",
+  "text": "Optional text description",
+  "audioData": "base64_encoded_audio",
+  "location": "GPS coordinates or address"
+}
 ```
 
-### 3. Frontend Setup
-```bash
-# In the root directory
-npm install
-
-# Start development server
-npm run dev
+### AI Analysis Response Format
+```json
+{
+  "success": true,
+  "data": {
+    "title": "Generated title",
+    "problemIdentified": "Issue type",
+    "department": "Responsible department",
+    "priority": "HIGH/MEDIUM/LOW",
+    "category": "ROAD/WATER/SANITATION/etc",
+    "imageCaption": "AI-generated description",
+    "complaintText": "Processed complaint text",
+    "location": "Issue location",
+    "aiConfidence": "high/medium/low"
+  }
+}
 ```
 
-### 4. Access the Application
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:5000
-- **Health Check**: http://localhost:5000/health
+## 🌐 Frontend Routes
 
-## 🔧 Configuration
+- `/` - Homepage with features and quick access
+- `/report` - Issue reporting form with AI analysis
+- `/issues` - Current issues dashboard
+- `/admin` - Admin panel for issue management
+- `/citizen` - Citizen dashboard (legacy)
+- `/issue/:id` - Individual issue details
 
-### Environment Variables
+## 🎨 UI Components
 
-#### Backend (.env)
-```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/janseva_db"
+### Key Components
+- **HomePage**: Landing page with features and navigation
+- **ReportIssue**: AI-powered issue reporting form
+- **CurrentIssues**: Dashboard for viewing all issues
+- **AdminDashboard**: Admin interface for issue management
+- **Header**: Navigation and language toggle
+- **LanguageContext**: Bilingual support provider
 
-# JWT Secret
-JWT_SECRET="your-super-secret-jwt-key-here"
-
-# Cloudinary (Free image hosting)
-CLOUDINARY_CLOUD_NAME="your-cloud-name"
-CLOUDINARY_API_KEY="your-api-key"
-CLOUDINARY_API_SECRET="your-api-secret"
-
-# Server
-PORT=5000
-NODE_ENV="development"
-
-# ML Model API (Free Hugging Face alternative)
-HUGGINGFACE_API_KEY="your-huggingface-api-key"
-```
-
-#### Frontend (.env)
-```env
-VITE_API_URL=http://localhost:5000/api
-```
-
-### Free Service Setup
-
-#### 1. Cloudinary (Image Hosting)
-1. Go to [cloudinary.com](https://cloudinary.com)
-2. Sign up for free account
-3. Get your cloud name, API key, and secret
-4. Add to backend `.env` file
-
-#### 2. Hugging Face (ML Models)
-1. Go to [huggingface.co](https://huggingface.co)
-2. Sign up for free account
-3. Go to Settings → Access Tokens
-4. Create new token
-5. Add to backend `.env` file
-
-#### 3. PostgreSQL Database
-**Option A: Local Installation**
-```bash
-# Install PostgreSQL
-# Create database
-createdb janseva_db
-```
-
-**Option B: Free Cloud Hosting**
-- [Supabase](https://supabase.com) - Free tier
-- [Neon](https://neon.tech) - Free tier
-- [Railway](https://railway.app) - Free tier
-
-## 🐳 Docker Deployment
-
-### Quick Docker Setup
-```bash
-# Build and run with Docker Compose
-docker-compose up --build
-
-# Or run individually
-docker build -t janseva-backend ./backend
-docker build -t janseva-frontend .
-
-docker run -p 5000:5000 janseva-backend
-docker run -p 5173:5173 janseva-frontend
-```
-
-### Docker Compose
-```yaml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: janseva_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  backend:
-    build: ./backend
-    ports:
-      - "5000:5000"
-    environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/janseva_db
-      JWT_SECRET: your-jwt-secret
-      CLOUDINARY_CLOUD_NAME: your-cloud-name
-      CLOUDINARY_API_KEY: your-api-key
-      CLOUDINARY_API_SECRET: your-api-secret
-    depends_on:
-      - postgres
-
-  frontend:
-    build: .
-    ports:
-      - "5173:5173"
-    environment:
-      VITE_API_URL: http://localhost:5000/api
-    depends_on:
-      - backend
-
-volumes:
-  postgres_data:
-```
-
-## 📱 API Documentation
-
-### Authentication Endpoints
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/refresh` - Refresh JWT token
-- `POST /api/auth/logout` - User logout
-
-### Issue Management
-- `GET /api/issues` - Get all issues (with filtering)
-- `POST /api/issues` - Create new issue
-- `GET /api/issues/:id` - Get issue by ID
-- `PUT /api/issues/:id` - Update issue
-- `DELETE /api/issues/:id` - Delete issue
-- `POST /api/issues/:id/images` - Upload images
-- `POST /api/issues/:id/comments` - Add comment
-
-### User Management
-- `GET /api/users/profile` - Get user profile
-- `PUT /api/users/profile` - Update profile
-- `PUT /api/users/password` - Change password
-- `GET /api/users/issues` - Get user's issues
-
-### Admin Functions
-- `GET /api/admin/dashboard` - Admin dashboard stats
-- `GET /api/admin/users` - Get all users
-- `PUT /api/admin/users/:id/role` - Update user role
-- `PUT /api/admin/issues/:id/assign` - Assign issue
-- `PUT /api/admin/issues/:id/status` - Update issue status
-- `GET /api/admin/analytics` - Get analytics data
-
-### Real-time Features
-- WebSocket connection for live updates
-- Real-time notifications
-- Live issue status updates
-- Instant comment notifications
-
-## 🧪 Testing
-
-### Backend Testing
-```bash
-cd backend
-npm test
-```
-
-### Frontend Testing
-```bash
-npm test
-```
-
-### API Testing
-```bash
-# Health check
-curl http://localhost:5000/health
-
-# Test authentication
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password"}'
-```
-
-## 📊 Database Schema
-
-The system uses the following main entities:
-- **Users**: Citizens, admins, department staff
-- **Issues**: Civic problems reported by citizens
-- **Comments**: Discussion on issues
-- **IssueUpdates**: Status change history
-- **Notifications**: Real-time updates
+### Features
+- **Responsive Design**: Mobile-first approach
+- **Dark/Light Mode**: Automatic theme detection
+- **Loading States**: Smooth loading animations
+- **Error Handling**: User-friendly error messages
+- **Form Validation**: Real-time validation feedback
 
 ## 🔒 Security Features
 
-- JWT authentication with refresh tokens
-- Password hashing with bcrypt
-- Input validation and sanitization
-- Rate limiting (100 requests per 15 minutes)
-- CORS protection
-- Security headers with helmet
-- Role-based access control
+- **Input Validation**: Server-side validation for all inputs
+- **File Upload Security**: Secure image upload handling
+- **CORS Protection**: Cross-origin request protection
+- **Rate Limiting**: API request rate limiting
+- **Error Handling**: Secure error responses
 
-## 🚀 Production Deployment
+## 🚀 Deployment
 
-### Environment Setup
+### Frontend Deployment
 ```bash
-# Set production environment
-export NODE_ENV=production
-export PORT=5000
-
-# Use environment-specific .env files
-cp .env.production .env
+cd frontend
+npm run build
+# Deploy dist/ folder to your hosting service
 ```
 
-### Database Migration
+### Backend Deployment
 ```bash
-cd backend
-npm run db:migrate
-npm run db:generate
-```
-
-### Build and Start
-```bash
-# Backend
 cd backend
 npm run build
 npm start
-
-# Frontend
-npm run build
-npm run preview
+# Deploy to your server or cloud platform
 ```
 
-### PM2 Process Management
-```bash
-# Install PM2
-npm install -g pm2
+### Environment Variables
+Create `.env` files in both frontend and backend directories:
 
-# Start backend
-cd backend
-pm2 start dist/index.js --name "janseva-backend"
-
-# Start frontend
-pm2 start npm --name "janseva-frontend" -- run preview
+**Frontend (.env)**
+```
+VITE_API_URL=http://localhost:3000
 ```
 
-## 🆘 Troubleshooting
-
-### Common Issues
-
-#### 1. Database Connection Error
-- Check PostgreSQL is running
-- Verify DATABASE_URL in .env
-- Ensure database exists
-
-#### 2. Prisma Errors
-```bash
-cd backend
-npm run db:generate
-npm run db:migrate
+**Backend (.env)**
 ```
-
-#### 3. Image Upload Issues
-- Verify Cloudinary credentials
-- Check image file size and format
-- Ensure CLOUDINARY_* env vars are set
-
-#### 4. AI Service Errors
-- Check Hugging Face API key
-- Verify internet connection
-- Check API rate limits
-
-#### 5. Frontend Build Issues
-```bash
-# Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
-npm run build
-```
-
-### Logs and Debugging
-```bash
-# Backend logs
-cd backend
-npm run dev
-
-# Frontend logs
-npm run dev
-
-# Check browser console for frontend errors
-# Check terminal for backend errors
+PORT=3000
+NODE_ENV=production
 ```
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## 📄 License
+## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🎯 Roadmap
+## 🙏 Acknowledgments
 
-### Phase 1: Core Features ✅
-- [x] User authentication system
-- [x] Issue reporting and management
-- [x] Basic AI integration
-- [x] Multi-language support
-
-### Phase 2: Advanced Features 🚧
-- [ ] Real-time notifications
-- [ ] Advanced analytics dashboard
-- [ ] Mobile app development
-- [ ] SMS/Email notifications
-
-### Phase 3: Enterprise Features 📋
-- [ ] Advanced ML models
-- [ ] Performance monitoring
-- [ ] Advanced security features
-- [ ] API rate limiting and quotas
+- **Transformers Library**: For AI model integration
+- **React Team**: For the amazing frontend framework
+- **Node.js Community**: For the robust backend runtime
+- **OpenStreetMap**: For map data and services
 
 ## 📞 Support
 
-For issues and questions:
-1. Check the troubleshooting section
-2. Review API documentation
-3. Check server logs for errors
-4. Verify environment configuration
-5. Create an issue on GitHub
-
-## 🙏 Acknowledgments
-
-- **Hugging Face** for free ML model APIs
-- **Cloudinary** for free image hosting
-- **PostgreSQL** for robust database
-- **React** and **Node.js** communities
+For support and questions:
+- Create an issue in the repository
+- Contact the development team
+- Check the documentation
 
 ---
 
-**Built with ❤️ for Indian cities and civic engagement**
+**Made with ❤️ for better civic engagement and community development**

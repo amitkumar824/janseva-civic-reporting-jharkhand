@@ -1,131 +1,297 @@
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import dotenv from 'dotenv';
-import rateLimit from 'express-rate-limit';
-
-// Import routes
-import authRoutes from './routes/auth';
-import issueRoutes from './routes/issues';
-import userRoutes from './routes/users';
-import adminRoutes from './routes/admin';
-import notificationRoutes from './routes/notifications';
-
-// Import middleware
-import { authenticateToken } from './middleware/auth';
-import { errorHandler } from './middleware/errorHandler';
-
-// Import Prisma client
-import { PrismaClient } from '@prisma/client';
-
-dotenv.config();
+import { aiService } from './services/aiService';
+import path from 'path';
 
 const app = express();
-const server = createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE"]
-  }
-});
-
-// Initialize Prisma client
-const prisma = new PrismaClient();
-const PORT = process.env.PORT || 5000;
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
+const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
-  credentials: true
-}));
-app.use(morgan('dev'));
-app.use(limiter);
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Health check
+// In-memory storage for issues (replace with database in production)
+let issues: any[] = [];
+let issueIdCounter = 1;
+
+// Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ status: 'OK', message: 'Civic Issue API is running' });
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/issues', authenticateToken, issueRoutes);
-app.use('/api/users', authenticateToken, userRoutes);
-app.use('/api/admin', authenticateToken, adminRoutes);
-app.use('/api/notifications', authenticateToken, notificationRoutes);
-
-// Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
-  socket.on('join-room', (userId: string) => {
-    socket.join(`user-${userId}`);
-    console.log(`User ${userId} joined their room`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
-});
-
-// Make io available to routes
-app.set('io', io);
-
-// Error handling middleware
-app.use(errorHandler);
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
-
-// Database connection and server start
-async function startServer() {
+// AI Analysis endpoint
+app.post('/api/issues/analyze', async (req, res) => {
   try {
-    // Test Prisma connection
-    await prisma.$connect();
-    console.log('✅ Database connected successfully');
+    const { imageData, text, audioData, location } = req.body;
     
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
-      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+    console.log('AI Analysis request received:', {
+      hasImage: !!imageData,
+      hasText: !!text,
+      hasAudio: !!audioData,
+      location
+    });
+
+    const result = await aiService.analyzeCivicIssue(imageData, text, audioData, location);
+    
+    console.log('AI Analysis result:', result);
+    res.json(result);
+  } catch (error) {
+    console.error('AI Analysis error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'AI analysis failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Submit issue endpoint
+app.post('/api/issues', async (req, res) => {
+  try {
+    const issueData = req.body;
+    
+    // Create new issue
+    const newIssue = {
+      id: issueIdCounter++,
+      ...issueData,
+      status: 'SUBMITTED',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      resolutionPhoto: null,
+      assignedTo: null,
+      comments: []
+    };
+
+    issues.push(newIssue);
+    
+    console.log('Issue submitted:', newIssue);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Issue submitted successfully',
+      data: newIssue
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    process.exit(1);
+    console.error('Error submitting issue:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to submit issue',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
+});
+
+// Get all issues endpoint
+app.get('/api/issues', async (req, res) => {
+  try {
+    const { status, category, priority, search } = req.query;
+    
+    let filteredIssues = [...issues];
+    
+    // Apply filters
+    if (status) {
+      filteredIssues = filteredIssues.filter(issue => issue.status === status);
+    }
+    
+    if (category) {
+      filteredIssues = filteredIssues.filter(issue => issue.category === category);
+    }
+    
+    if (priority) {
+      filteredIssues = filteredIssues.filter(issue => issue.priority === priority);
+    }
+    
+    if (search) {
+      const searchTerm = search.toString().toLowerCase();
+      filteredIssues = filteredIssues.filter(issue => 
+        issue.title.toLowerCase().includes(searchTerm) ||
+        issue.description.toLowerCase().includes(searchTerm) ||
+        issue.location.toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    // Sort by creation date (newest first)
+    filteredIssues.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    res.json({
+      success: true,
+      data: filteredIssues,
+      total: filteredIssues.length
+    });
+  } catch (error) {
+    console.error('Error fetching issues:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch issues',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get single issue endpoint
+app.get('/api/issues/:id', async (req, res) => {
+  try {
+    const issueId = parseInt(req.params.id);
+    const issue = issues.find(i => i.id === issueId);
+    
+    if (!issue) {
+      return res.status(404).json({
+        success: false,
+        error: 'Issue not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: issue
+    });
+  } catch (error) {
+    console.error('Error fetching issue:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch issue',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Update issue status endpoint
+app.put('/api/issues/:id', async (req, res) => {
+  try {
+    const issueId = parseInt(req.params.id);
+    const { status, resolutionPhoto } = req.body;
+    
+    const issueIndex = issues.findIndex(i => i.id === issueId);
+    
+    if (issueIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: 'Issue not found'
+      });
+    }
+    
+    // Update issue
+    issues[issueIndex] = {
+      ...issues[issueIndex],
+      status: status || issues[issueIndex].status,
+      resolutionPhoto: resolutionPhoto || issues[issueIndex].resolutionPhoto,
+      updatedAt: new Date().toISOString()
+    };
+    
+    console.log('Issue updated:', issues[issueIndex]);
+    
+    res.json({
+      success: true,
+      message: 'Issue updated successfully',
+      data: issues[issueIndex]
+    });
+  } catch (error) {
+    console.error('Error updating issue:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update issue',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Add comment to issue endpoint
+app.post('/api/issues/:id/comments', async (req, res) => {
+  try {
+    const issueId = parseInt(req.params.id);
+    const { content, author } = req.body;
+    
+    const issueIndex = issues.findIndex(i => i.id === issueId);
+    
+    if (issueIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        error: 'Issue not found'
+      });
+    }
+    
+    const comment = {
+      id: Date.now(),
+      content,
+      author: author || 'Anonymous',
+      createdAt: new Date().toISOString()
+    };
+    
+    issues[issueIndex].comments.push(comment);
+    issues[issueIndex].updatedAt = new Date().toISOString();
+    
+    console.log('Comment added to issue:', comment);
+    
+    res.json({
+      success: true,
+      message: 'Comment added successfully',
+      data: comment
+    });
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to add comment',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get dashboard stats endpoint
+app.get('/api/dashboard/stats', async (req, res) => {
+  try {
+    const totalIssues = issues.length;
+    const submittedIssues = issues.filter(i => i.status === 'SUBMITTED').length;
+    const inProgressIssues = issues.filter(i => i.status === 'IN_PROGRESS').length;
+    const resolvedIssues = issues.filter(i => i.status === 'RESOLVED').length;
+    
+    const categoryStats = issues.reduce((acc, issue) => {
+      acc[issue.category] = (acc[issue.category] || 0) + 1;
+      return acc;
+    }, {} as any);
+    
+    const priorityStats = issues.reduce((acc, issue) => {
+      acc[issue.priority] = (acc[issue.priority] || 0) + 1;
+      return acc;
+    }, {} as any);
+    
+    res.json({
+      success: true,
+      data: {
+        total: totalIssues,
+        submitted: submittedIssues,
+        inProgress: inProgressIssues,
+        resolved: resolvedIssues,
+        categories: categoryStats,
+        priorities: priorityStats
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch dashboard stats',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Serve static files (for production)
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../../frontend/dist')));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
+  });
 }
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  await prisma.$disconnect();
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Civic Issue API server running on port ${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`🤖 AI Analysis: http://localhost:${PORT}/api/issues/analyze`);
+  console.log(`📝 Submit Issue: http://localhost:${PORT}/api/issues`);
 });
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
-  await prisma.$disconnect();
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-});
-
-startServer();
+export default app;

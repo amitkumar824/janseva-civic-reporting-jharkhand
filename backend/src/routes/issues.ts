@@ -409,4 +409,22 @@ router.post('/:id/comments', [
   }
 });
 
+// AI Analysis endpoint
+router.post('/analyze', async (req, res) => {
+  try {
+    const { imageData, text, audioData, location } = req.body;
+    
+    const result = await analyzeImageWithAI(imageData, text, audioData, location);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('AI Analysis error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'AI analysis failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
